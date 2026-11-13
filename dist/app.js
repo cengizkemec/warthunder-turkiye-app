@@ -405,6 +405,21 @@ if (loginForm) {
   });
 }
 
+$('#login-other')?.addEventListener('click', () => {
+  hideError($('#login-error'));
+
+  invoke('open_auth', {
+    mode: 'login',
+    identification: null,
+    password: null,
+    username: null,
+    email: null,
+    remember: true,
+  }).catch(() => {
+    showError($('#login-error'), 'Giriş penceresi açılamadı. Tekrar dene.');
+  });
+});
+
 const registerForm = $('#register-form');
 
 if (registerForm) {

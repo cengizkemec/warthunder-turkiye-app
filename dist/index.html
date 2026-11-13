@@ -69,6 +69,9 @@
               </label>
               <p class="form-error" id="login-error" hidden></p>
               <button class="btn btn-primary btn-block" type="submit">Giriş Yap</button>
+              <button class="text-link auth-other-link" id="login-other" type="button">
+                Discord, Google, Steam veya passkey ile giriş yap
+              </button>
             </form>
 
             <form id="register-form" class="auth-form is-hidden">
@@ -89,8 +92,9 @@
             </form>
 
             <p class="auth-note">
-              Devam ettiğinde güvenli giriş penceresi açılır. Güvenlik doğrulaması istenebilir.
-              Giriş yaptığın sürece bu cihazda oturumun açık kalır.
+              Devam ettiğinde güvenli giriş penceresi açılır. Açılan pencerede Turnstile
+              doğrulamasını tamamlayıp <strong>Giriş Yap</strong>'a bas. Giriş yaptığın sürece
+              bu cihazda oturumun açık kalır.
             </p>
           </div>
         </section>
@@ -280,7 +284,7 @@
 
       <footer>
         <span>War Thunder Türkiye · warthunder.tr</span>
-        <span id="app-version">v0.2.0</span>
+        <span id="app-version">v0.2.1</span>
       </footer>
     </div>
 
@@ -342,7 +346,7 @@
 
         <p class="form-error" id="settings-error" hidden></p>
         <button class="btn btn-primary btn-block" type="button" id="settings-save">Kaydet</button>
-        <p class="settings-version">War Thunder Türkiye <span id="settings-version">v0.2.0</span></p>
+        <p class="settings-version">War Thunder Türkiye <span id="settings-version">v0.2.1</span></p>
       </div>
     </div>
 

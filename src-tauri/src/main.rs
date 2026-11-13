@@ -171,6 +171,11 @@ fn auth_script(auth: &PendingAuth) -> String {
           radial-gradient(900px 600px at 8% 100%, rgba(216,181,106,.13), transparent 60%),
           linear-gradient(160deg, #070c0f, #0d171c 58%, #070c0f);
       }}
+      #cc-main,
+      .cc-window,
+      .cc-revoke {{
+        display: none !important;
+      }}
       .ModalManager {{
         z-index: 9999 !important;
         background: rgba(2,6,8,.62) !important;
@@ -255,7 +260,7 @@ fn auth_script(auth: &PendingAuth) -> String {
 
     const hint = document.createElement('p');
     hint.className = 'WTTRDesktopAuthHint';
-    hint.textContent = 'War Thunder Türkiye hesabınla devam et.';
+    hint.textContent = 'Turnstile doğrulamasını tamamla, ardından Giriş Yap’a bas.';
 
     body.insertBefore(hint, body.firstChild);
     body.insertBefore(logo, hint);
@@ -278,12 +283,28 @@ fn auth_script(auth: &PendingAuth) -> String {
     if (ok) {{
       filled = true;
       decorate();
+    }}
+  }};
 
-      if (payload.remember !== false) {{
-        const remember = document.querySelector('input[name="remember"]');
-        if (remember && !remember.checked) remember.click();
+  const checkRemember = () => {{
+    if (payload.remember === false || isRegister) return true;
+
+    const remember = document.querySelector('.Modal-content input[name="remember"]')
+      || document.querySelector('.Modal-content input[type="checkbox"]');
+
+    if (!remember) return false;
+
+    if (!remember.checked) {{
+      remember.click();
+
+      if (!remember.checked) {{
+        remember.checked = true;
+        remember.dispatchEvent(new Event('input', {{ bubbles: true }}));
+        remember.dispatchEvent(new Event('change', {{ bubbles: true }}));
       }}
     }}
+
+    return remember.checked;
   }};
 
   const openModal = () => {{
@@ -361,9 +382,13 @@ fn auth_script(auth: &PendingAuth) -> String {
     }} else {{
       seenModal = true;
       fill();
+
+      if (filled) {{
+        checkRemember();
+      }}
     }}
 
-    if (filled || ++attempts > 90) {{
+    if (++attempts > 90) {{
       clearInterval(timer);
     }}
   }}, 400);
@@ -1449,6 +1474,7 @@ async fn install_update(app: AppHandle, url: String) -> Result<(), String> {
     log(&format!("install_update:launch:{}", path.display()));
 
     std::process::Command::new(&path)
+        .args(["/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-"])
         .spawn()
         .map_err(|error| error.to_string())?;
 

@@ -47,7 +47,7 @@ Ardından Inno Setup ile kurulum dosyasını üret:
 Çıktı:
 
 ```text
-dist-installer\WarThunderTurkiyeSetup-0.2.0.exe
+dist-installer\WarThunderTurkiyeSetup-0.2.1.exe
 ```
 
 Tauri ayrıca şurada NSIS kurulumu da üretir:
@@ -71,6 +71,10 @@ Bas-konuş, siteye `WTTRDesktop.setPTT` üzerinden bildirilir. Social ses ayarla
 - İnternet bağlantısını ve `https://warthunder.tr` erişimini kontrol et.
 - Norton 360, Smart App Control veya benzeri güvenlik yazılımları imzasız yeni derlemeyi ilk açılışta karantinaya alabilir. Uygulamaya izin ver, ardından **Tekrar dene** düğmesine bas.
 - Kurulumdan sonra uygulamayı bir kez normal olarak açıp siteye erişebildiğini doğrula.
+
+### Giriş yaparken Turnstile / çerez bildirimi
+
+Giriş penceresinde Turnstile doğrulaması etkileşimli çıkabilir. Doğrulamayı tamamlayıp **Giriş Yap** düğmesine bas. Çerez bildirimi giriş sırasında gizlenir; giriş sonrası siteyi kullanırken yeniden görünebilir.
 
 ### Bas-konuş çalışmıyor
 

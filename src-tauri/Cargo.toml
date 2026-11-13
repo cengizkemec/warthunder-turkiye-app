@@ -1,6 +1,6 @@
 [package]
 name = "warthunder-desktop"
-version = "0.2.0"
+version = "0.2.1"
 description = "War Thunder Türkiye desktop app"
 authors = ["Cengiz Kemec"]
 edition = "2021"

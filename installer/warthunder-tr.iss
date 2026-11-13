@@ -1,5 +1,5 @@
 #define MyAppName "War Thunder Türkiye"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.2.1"
 #define MyAppPublisher "Cengiz Kemec"
 #define MyAppURL "https://warthunder.tr/"
 #define MyAppExeName "warthunder-desktop.exe"
@@ -23,12 +23,12 @@ OutputDir=..\dist-installer
 OutputBaseFilename=WarThunderTurkiyeSetup-{#MyAppVersion}
 SetupIconFile=..\src-tauri\icons\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
-Compression=lzma2/ultra64
+Compression=lzma2/fast
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
 RestartApplications=no
-VersionInfoVersion=0.2.0.0
+VersionInfoVersion=0.2.1.0
 VersionInfoDescription={#MyAppName} Setup
 VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}
@@ -51,7 +51,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall
 
 [Code]
 const
