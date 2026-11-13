@@ -101,6 +101,10 @@ Script önce uygulama exe'sini imzalar, sonra Inno Setup paketini üretir ve pak
 
 Giriş penceresinde Turnstile doğrulaması etkileşimli çıkabilir. Doğrulamayı tamamlayıp **Giriş Yap** düğmesine bas. Çerez bildirimi giriş sırasında gizlenir; giriş sonrası siteyi kullanırken yeniden görünebilir.
 
+### Görev Yöneticisi’nde WebView2 süreçleri
+
+WebView2, Windows’ta `msedgewebview2.exe` adlı ayrı sandbox süreçlerinde çalışır. Görev Yöneticisi’nde “WebView2” olarak görünmesi normaldir; bu süreçler uygulamanın parçasıdır ve güvenlik/kararlılık için ayrı tutulur. WebView2’yi ana uygulama sürecine gömme desteklenen bir seçenek değildir.
+
 ### Bas-konuş çalışmıyor
 
 - Social sesli oda ayarlarında bas-konuşun açık olduğundan emin ol.

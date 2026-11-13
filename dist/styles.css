@@ -57,11 +57,33 @@ input {
   gap: 18px;
 }
 
-.brand {
-  width: min(250px, 42vw);
-  height: auto;
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 46px;
+  height: 46px;
   display: block;
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.35));
+  border-radius: 12px;
+  object-fit: cover;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45));
+}
+
+.brand-wordmark {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.brand-wordmark strong {
+  color: var(--gold);
+  font-weight: 800;
 }
 
 .topbar-actions {
@@ -1278,8 +1300,13 @@ footer {
     gap: 10px;
   }
 
-  .brand {
-    width: min(200px, 52vw);
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+  }
+
+  .brand-wordmark {
+    display: none;
   }
 
   .welcome-copy h1 {

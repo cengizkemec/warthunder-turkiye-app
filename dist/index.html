@@ -9,7 +9,10 @@
   <body data-session="checking">
     <div class="app">
       <header class="topbar">
-        <img class="brand" src="logo-wide.png" alt="War Thunder Türkiye" />
+        <div class="brand-lockup">
+          <img class="brand-mark" src="app-icon.png" alt="War Thunder Türkiye" />
+          <span class="brand-wordmark">WAR THUNDER <strong>TÜRKİYE</strong></span>
+        </div>
         <div class="topbar-actions">
           <div class="account-chip" id="account-chip">
             <span class="avatar" id="account-avatar">
@@ -366,8 +369,9 @@
           <button class="btn btn-compact" type="button" id="setting-mic">Windows ayarlarını aç</button>
         </div>
         <p class="settings-note">
-          Uygulama Windows mikrofon listesinde görünmüyorsa önce <strong>Mikrofonu test et</strong>'e
-          bas, izin ver, sonra Windows ayarlarını aç.
+          Uygulama listede görünmüyorsa önce <strong>Mikrofonu test et</strong>'e bas ve izin ver.
+          Windows, WebView2 tabanlı uygulamalarda mikrofon iznini <strong>WebView2</strong> adıyla
+          gösterebilir; bu normaldir, izin verildiğinde mikrofon çalışır.
         </p>
 
         <p class="form-error" id="settings-error" hidden></p>
