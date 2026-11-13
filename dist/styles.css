@@ -818,11 +818,87 @@ h1 {
 }
 
 .voice-panel,
-.latest-panel {
+.latest-panel,
+.notifications-panel {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
   padding: 15px 17px;
+}
+
+.notification-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.notification-item {
+  appearance: none;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 10px;
+  padding: 9px 10px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.notification-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--line);
+}
+
+.notification-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.14);
+}
+
+.notification-item.is-read .notification-dot {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.notification-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notification-copy strong {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notification-copy small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.notification-arrow {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.notification-empty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 10.5px;
+  padding: 8px 2px;
 }
 
 .section-head {
@@ -1255,7 +1331,8 @@ footer {
     grid-template-columns: 1fr;
   }
 
-  .discussion-list {
+  .discussion-list,
+  .notification-list {
     grid-template-columns: 1fr;
   }
 

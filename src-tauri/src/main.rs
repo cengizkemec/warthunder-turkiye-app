@@ -51,6 +51,7 @@ struct SessionState {
     avatar_url: Option<String>,
     unread: i64,
     last_notification_id: Option<String>,
+    notifications: Vec<BridgeNotificationItem>,
 }
 
 struct AppState {
@@ -60,7 +61,7 @@ struct AppState {
     auth_shell_pending: Arc<Mutex<bool>>,
 }
 
-#[derive(Clone, serde::Deserialize)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BridgeUser {
     username: Option<String>,
@@ -76,6 +77,21 @@ struct BridgeNotification {
     body: Option<String>,
 }
 
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BridgeNotificationItem {
+    id: Option<String>,
+    #[serde(rename = "type")]
+    kind: Option<String>,
+    label: Option<String>,
+    is_read: Option<bool>,
+    created_at: Option<String>,
+    from_user: Option<BridgeUser>,
+    subject_type: Option<String>,
+    subject_id: Option<serde_json::Value>,
+    url: Option<String>,
+}
+
 #[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BridgeSession {
@@ -87,6 +103,8 @@ struct BridgeSession {
     unread_notifications: i64,
     #[serde(default)]
     latest_notification: Option<BridgeNotification>,
+    #[serde(default)]
+    notifications: Vec<BridgeNotificationItem>,
     #[serde(default)]
     selftest: bool,
 }
@@ -964,53 +982,73 @@ fn session_script() -> &'static str {
     }
   };
 
-  let cachedNotification = null;
-  let notificationFetchedAt = 0;
+  let cachedNotifications = null;
+  let notificationsFetchedAt = 0;
 
-  const stripHtml = (value) => {
-    if (!value) return '';
-
-    const element = document.createElement('div');
-    element.innerHTML = String(value);
-    return (element.textContent || '').replace(/\s+/g, ' ').trim();
-  };
-
-  const latestNotification = async () => {
+  const fetchNotifications = async () => {
     const now = Date.now();
-    if (now - notificationFetchedAt < 5000) return cachedNotification;
-    notificationFetchedAt = now;
+    if (now - notificationsFetchedAt < 5000) return cachedNotifications;
+    notificationsFetchedAt = now;
 
     try {
-      const response = await fetch('/api/notifications?page[limit]=1&sort=-createdAt', {
+      const response = await fetch('/api/desktop/notifications?limit=8', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      });
+
+      if (response.ok) {
+        const payload = await response.json();
+        const data = payload.data || {};
+
+        cachedNotifications = {
+          items: Array.isArray(data.notifications) ? data.notifications : [],
+          unread: Number(data.unreadCount) || 0,
+          authoritative: true
+        };
+
+        return cachedNotifications;
+      }
+    } catch (error) {}
+
+    try {
+      const response = await fetch('/api/notifications?page[limit]=8&sort=-createdAt', {
         credentials: 'same-origin',
         headers: { Accept: 'application/json' }
       });
 
       if (!response.ok) {
-        cachedNotification = null;
+        cachedNotifications = null;
         return null;
       }
 
       const payload = await response.json();
-      const item = payload.data && payload.data[0];
+      const items = (payload.data || []).map((item) => {
+        const attributes = item.attributes || {};
+        const relationships = item.relationships || {};
+        const subject = relationships.subject && relationships.subject.data;
 
-      if (!item) {
-        cachedNotification = null;
-        return null;
-      }
+        return {
+          id: String(item.id),
+          type: attributes.contentType || 'notification',
+          label: 'Yeni bildirim',
+          isRead: Boolean(attributes.isRead),
+          createdAt: attributes.createdAt || null,
+          fromUser: null,
+          subjectType: subject ? subject.type : null,
+          subjectId: subject ? subject.id : null,
+          url: '/notifications'
+        };
+      });
 
-      const attributes = item.attributes || {};
-      const body = stripHtml(attributes.content || attributes.title || '');
-
-      cachedNotification = {
-        id: String(item.id),
-        title: 'War Thunder Türkiye',
-        body: body || 'Yeni bir bildirimin var.'
+      cachedNotifications = {
+        items,
+        unread: null,
+        authoritative: false
       };
 
-      return cachedNotification;
+      return cachedNotifications;
     } catch (error) {
-      return cachedNotification;
+      return cachedNotifications;
     }
   };
 
@@ -1018,9 +1056,28 @@ fn session_script() -> &'static str {
     const session = fromFlarum() || await fromApi();
     if (!session) return;
 
-    if (session.authenticated && Number(session.unreadNotifications) > 0) {
-      const notification = await latestNotification();
-      if (notification) session.latestNotification = notification;
+    if (session.authenticated) {
+      const notifications = await fetchNotifications();
+
+      if (notifications) {
+        session.notifications = notifications.items;
+
+        if (notifications.authoritative && notifications.unread !== null) {
+          session.unreadNotifications = notifications.unread;
+        }
+
+        const latest = notifications.items.find((item) => !item.isRead);
+
+        if (latest) {
+          const fromUser = latest.fromUser && (latest.fromUser.displayName || latest.fromUser.username);
+
+          session.latestNotification = {
+            id: latest.id,
+            title: 'War Thunder Türkiye',
+            body: (latest.label || 'Yeni bildirim') + (fromUser ? ' · ' + fromUser : '')
+          };
+        }
+      }
     }
 
     const encoded = JSON.stringify(session);
@@ -1297,6 +1354,7 @@ fn session_json(session: &SessionState) -> serde_json::Value {
         "authenticated": session.authenticated,
         "user": user,
         "unreadNotifications": session.unread,
+        "notifications": session.notifications,
     })
 }
 
@@ -1353,7 +1411,8 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
             || session.username != next_username
             || session.display_name != next_display_name
             || session.avatar_url != next_avatar_url
-            || session.unread != payload.unread_notifications;
+            || session.unread != payload.unread_notifications
+            || session.notifications != payload.notifications;
 
         session.known = true;
         session.authenticated = payload.authenticated;
@@ -1361,6 +1420,7 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
         session.display_name = next_display_name;
         session.avatar_url = next_avatar_url;
         session.unread = payload.unread_notifications;
+        session.notifications = payload.notifications.clone();
 
         if payload.authenticated {
             if let Some(notification) = payload.latest_notification.as_ref() {

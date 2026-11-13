@@ -23,6 +23,7 @@ const state = {
     authenticated: false,
     user: null,
     unreadNotifications: 0,
+    notifications: [],
   },
   settings: {
     pttKey: 'AltLeft',
@@ -295,6 +296,7 @@ const renderSession = () => {
 
   setAvatar('account-avatar-img', 'account-initial', user, displayName);
   setAvatar('welcome-avatar-img', 'welcome-initial', user, displayName);
+  renderNotifications(state.session.notifications);
 };
 
 const applySession = (payload) => {
@@ -306,6 +308,7 @@ const applySession = (payload) => {
     authenticated: Boolean(payload.authenticated),
     user: payload.user || null,
     unreadNotifications: Math.max(0, Number(payload.unreadNotifications) || 0),
+    notifications: Array.isArray(payload.notifications) ? payload.notifications : [],
   };
 
   state.session = next;
@@ -572,6 +575,10 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && !state.capturing) closeSettings();
 });
 
+$('#notifications-all')?.addEventListener('click', () => {
+  openSiteUrl('https://warthunder.tr/notifications');
+});
+
 $('#setting-mic-test')?.addEventListener('click', () => {
   invoke('request_microphone')
     .then(() => {
@@ -630,7 +637,62 @@ $('#logout-button')?.addEventListener('click', () => {
     });
 });
 
-const discussionList = $('#latest-discussions');
+const notificationList = $('#notifications-list');
+
+function renderNotifications(items) {
+  if (!notificationList) return;
+
+  notificationList.innerHTML = '';
+
+  if (!Array.isArray(items) || items.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'notification-empty';
+    empty.textContent = 'Yeni bildirim yok.';
+    notificationList.appendChild(empty);
+    return;
+  }
+
+  items.slice(0, 6).forEach((item) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `notification-item${item.isRead ? ' is-read' : ''}`;
+    button.title = item.label || 'Bildirim';
+
+    const dot = document.createElement('span');
+    dot.className = 'notification-dot';
+
+    const copy = document.createElement('span');
+    copy.className = 'notification-copy';
+
+    const title = document.createElement('strong');
+    title.textContent = item.label || 'Yeni bildirim';
+
+    const meta = document.createElement('small');
+    const fromUser = item.fromUser && (item.fromUser.displayName || item.fromUser.username);
+    const date = formatDate(item.createdAt);
+    meta.textContent = [fromUser, date].filter(Boolean).join(' · ');
+
+    copy.appendChild(title);
+    copy.appendChild(meta);
+
+    const arrow = document.createElement('span');
+    arrow.className = 'notification-arrow';
+    arrow.textContent = '→';
+
+    button.appendChild(dot);
+    button.appendChild(copy);
+    button.appendChild(arrow);
+
+    button.addEventListener('click', () => {
+      const url = item.url && item.url.startsWith('/')
+        ? `https://warthunder.tr${item.url}`
+        : 'https://warthunder.tr/notifications';
+      openSiteUrl(url);
+    });
+
+    notificationList.appendChild(button);
+  });
+}
 
 const formatDate = (value) => {
   if (!value) return '';

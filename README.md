@@ -11,8 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/cengizkemec/warthunder-turkiye-app/releases/latest">Son Sürüm</a> ·
-  <a href="https://github.com/cengizkemec/warthunder-turkiye-app/releases/download/v0.2.2/WarThunderTurkiyeSetup-0.2.2.exe">Kurulum Dosyası</a> ·
-  <a href="https://github.com/cengizkemec/warthunder-desktop-bridge">Köprü Eklentisi</a> ·
+  <a href="https://github.com/cengizkemec/warthunder-turkiye-app/releases/download/v0.2.3/WarThunderTurkiyeSetup-0.2.3.exe">Kurulum Dosyası</a> ·
   <a href="https://warthunder.tr">warthunder.tr</a>
 </p>
 
@@ -22,8 +21,8 @@
 
 - **Uygulama deposu:** https://github.com/cengizkemec/warthunder-turkiye-app
 - **Son sürüm:** https://github.com/cengizkemec/warthunder-turkiye-app/releases/latest
-- **v0.2.2 kurulum dosyası:** https://github.com/cengizkemec/warthunder-turkiye-app/releases/download/v0.2.2/WarThunderTurkiyeSetup-0.2.2.exe
-- **Köprü eklentisi:** https://github.com/cengizkemec/warthunder-desktop-bridge
+- **v0.2.3 kurulum dosyası:** https://github.com/cengizkemec/warthunder-turkiye-app/releases/download/v0.2.3/WarThunderTurkiyeSetup-0.2.3.exe
+- **Köprü eklentisi:** özel/opsiyonel (depo gizli)
 - **Site:** https://warthunder.tr
 
 ## Nedir?
@@ -43,6 +42,7 @@ Bu proje **Flarum Social eklentisinden bağımsızdır**. Foruma kod, rota veya 
 - **Son 10 forum konusu:** Dashboard’da forumun son açılan konuları.
 - **Global bas-konuş:** Uygulama arka planda olsa bile çalışır. Caps Lock, harfler, sayılar, F tuşları, yön tuşları, medya tuşları ve daha fazlası atanabilir.
 - **Anlık Windows bildirimleri:** Varsayılan olarak açık. Yeni Flarum bildirimleri Windows bildirimi olarak gösterilir; Ayarlar’dan test edilebilir.
+- **Bildirim merkezi:** Dashboard’da son 8 Flarum bildirimi; okundu durumu, gönderen ve tarih. Bildirime tıklayınca ilgili konuya/notifications sayfasına gider.
 - **Mikrofon testi:** Windows mikrofon izin akışını tetikleyen test düğmesi.
 - **Güncelleme:** GitHub Releases ve `warthunder.tr` manifesti üzerinden sürüm kontrolü; sessiz kurulum ve otomatik yeniden açılış.
 - **Tepsi:** Ana Sayfa, Forum, Blog, Sosyal, Yenile, Çıkış. “2. Monitöre Taşı” kaldırıldı.
@@ -184,7 +184,7 @@ npm run tauri build
 Çıktı:
 
 ```text
-dist-installer\WarThunderTurkiyeSetup-0.2.2.exe
+dist-installer\WarThunderTurkiyeSetup-0.2.3.exe
 ```
 
 Tauri ayrıca NSIS paketi üretir:
