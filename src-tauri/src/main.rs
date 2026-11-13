@@ -1325,11 +1325,15 @@ fn start_ptt_listener(app: AppHandle, settings_state: Arc<Mutex<DesktopSettings>
 
             if pressed != down {
                 down = pressed;
-                log(&format!(
-                    "ptt:{}:{}",
-                    if down { "down" } else { "up" },
-                    settings.ptt_key
-                ));
+
+                if std::env::var("WTTR_DEBUG_PTT").is_ok() {
+                    log(&format!(
+                        "ptt:{}:{}",
+                        if down { "down" } else { "up" },
+                        settings.ptt_key
+                    ));
+                }
+
                 inject_ptt(&app, down, &settings.ptt_key);
             }
 
@@ -1966,6 +1970,7 @@ struct UpdateInfo {
     latest_version: Option<String>,
     url: Option<String>,
     asset_url: Option<String>,
+    sha256: Option<String>,
     notes: Option<String>,
     published_at: Option<String>,
 }
@@ -2041,27 +2046,28 @@ async fn fetch_github_update(
         .get("published_at")
         .and_then(|value| value.as_str())
         .map(str::to_string);
-    let asset_url = payload
+    let asset = payload
         .get("assets")
         .and_then(|value| value.as_array())
         .and_then(|assets| {
-            assets.iter().find_map(|asset| {
-                let name = asset
+            assets.iter().find(|asset| {
+                asset
                     .get("name")
                     .and_then(|value| value.as_str())
                     .unwrap_or("")
-                    .to_ascii_lowercase();
-
-                if name.ends_with(".exe") {
-                    asset
-                        .get("browser_download_url")
-                        .and_then(|value| value.as_str())
-                        .map(str::to_string)
-                } else {
-                    None
-                }
+                    .to_ascii_lowercase()
+                    .ends_with(".exe")
             })
         });
+    let asset_url = asset
+        .and_then(|asset| asset.get("browser_download_url"))
+        .and_then(|value| value.as_str())
+        .map(str::to_string);
+    let sha256 = asset
+        .and_then(|asset| asset.get("digest"))
+        .and_then(|value| value.as_str())
+        .and_then(|value| value.strip_prefix("sha256:"))
+        .map(str::to_string);
 
     Ok(Some(UpdateInfo {
         available: version_is_newer(&latest_version, APP_VERSION),
@@ -2069,6 +2075,7 @@ async fn fetch_github_update(
         latest_version: Some(latest_version),
         url,
         asset_url,
+        sha256,
         notes,
         published_at,
     }))
@@ -2117,6 +2124,11 @@ async fn fetch_site_update(client: &reqwest::Client) -> Result<Option<UpdateInfo
         .get("notes")
         .and_then(|value| value.as_str())
         .map(|value| value.chars().take(600).collect::<String>());
+    let sha256 = app
+        .get("sha256")
+        .and_then(|value| value.as_str())
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
 
     Ok(Some(UpdateInfo {
         available: version_is_newer(&latest_version, APP_VERSION),
@@ -2124,6 +2136,7 @@ async fn fetch_site_update(client: &reqwest::Client) -> Result<Option<UpdateInfo
         latest_version: Some(latest_version),
         url: download_url,
         asset_url: installer_url,
+        sha256,
         notes,
         published_at: None,
     }))
@@ -2180,6 +2193,7 @@ async fn check_for_updates() -> Result<UpdateInfo, String> {
             latest_version: None,
             url: None,
             asset_url: None,
+            sha256: None,
             notes: None,
             published_at: None,
         })
@@ -2189,7 +2203,11 @@ async fn check_for_updates() -> Result<UpdateInfo, String> {
 }
 
 #[tauri::command]
-async fn install_update(app: AppHandle, url: String) -> Result<(), String> {
+async fn install_update(
+    app: AppHandle,
+    url: String,
+    sha256: Option<String>,
+) -> Result<(), String> {
     let parsed = tauri::Url::parse(&url).map_err(|error| error.to_string())?;
 
     if parsed.scheme() != "https" {
@@ -2198,7 +2216,8 @@ async fn install_update(app: AppHandle, url: String) -> Result<(), String> {
 
     let host = parsed.host_str().unwrap_or("");
 
-    if host != "github.com" && !host.ends_with(".githubusercontent.com") {
+    if host != "github.com" && host != "warthunder.tr" && !host.ends_with(".githubusercontent.com")
+    {
         return Err("unsupported update host".to_string());
     }
 
@@ -2223,6 +2242,37 @@ async fn install_update(app: AppHandle, url: String) -> Result<(), String> {
     if bytes.len() < 2 || &bytes[..2] != b"MZ" {
         return Err("downloaded file is not a Windows installer".to_string());
     }
+
+    let expected_hash = sha256
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "update hash missing".to_string())?;
+
+    if expected_hash.len() != 64
+        || !expected_hash
+            .chars()
+            .all(|character| character.is_ascii_hexdigit())
+    {
+        return Err("invalid update hash".to_string());
+    }
+
+    use sha2::{Digest, Sha256};
+
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    let actual_hash = hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+
+    if !actual_hash.eq_ignore_ascii_case(expected_hash) {
+        log("install_update:hash-mismatch");
+        return Err("update hash mismatch".to_string());
+    }
+
+    log("install_update:hash-ok");
 
     let raw_name = parsed
         .path_segments()

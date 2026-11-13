@@ -878,7 +878,7 @@ updateInstallButton?.addEventListener('click', () => {
     updateInstallButton.disabled = true;
     updateInstallButton.textContent = 'İndiriliyor…';
 
-    invoke('install_update', { url: info.assetUrl }).catch(() => {
+    invoke('install_update', { url: info.assetUrl, sha256: info.sha256 || null }).catch(() => {
       updateInstallButton.disabled = false;
       updateInstallButton.textContent = 'Güncelle';
       showToast('Güncelleme indirilemedi.', 'error');
