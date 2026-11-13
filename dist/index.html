@@ -284,7 +284,7 @@
 
       <footer>
         <span>War Thunder Türkiye · warthunder.tr</span>
-        <span id="app-version">v0.2.1</span>
+        <span id="app-version">v0.2.2</span>
       </footer>
     </div>
 
@@ -341,12 +341,38 @@
           </div>
         </div>
 
-        <button class="btn btn-block" type="button" id="setting-mic">Mikrofon izin ayarlarını aç</button>
-        <p class="settings-note">Mikrofon izni Windows gizlilik ayarlarından yönetilir.</p>
+        <div class="settings-section">
+          <span class="settings-label">BİLDİRİMLER</span>
+
+          <label class="setting-row">
+            <span>
+              <strong>Anlık bildirimler</strong>
+              <small>Yeni bildirimlerde Windows bildirimi göster.</small>
+            </span>
+            <input type="checkbox" id="setting-notifications" />
+          </label>
+
+          <div class="setting-row setting-row-static">
+            <span>
+              <strong>Bildirim testi</strong>
+              <small>Windows bildiriminin çalıştığını kontrol et.</small>
+            </span>
+            <button class="btn btn-compact" id="notification-test" type="button">Test et</button>
+          </div>
+        </div>
+
+        <div class="settings-mic-actions">
+          <button class="btn btn-compact" type="button" id="setting-mic-test">Mikrofonu test et</button>
+          <button class="btn btn-compact" type="button" id="setting-mic">Windows ayarlarını aç</button>
+        </div>
+        <p class="settings-note">
+          Uygulama Windows mikrofon listesinde görünmüyorsa önce <strong>Mikrofonu test et</strong>'e
+          bas, izin ver, sonra Windows ayarlarını aç.
+        </p>
 
         <p class="form-error" id="settings-error" hidden></p>
         <button class="btn btn-primary btn-block" type="button" id="settings-save">Kaydet</button>
-        <p class="settings-version">War Thunder Türkiye <span id="settings-version">v0.2.1</span></p>
+        <p class="settings-version">War Thunder Türkiye <span id="settings-version">v0.2.2</span></p>
       </div>
     </div>
 

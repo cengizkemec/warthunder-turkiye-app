@@ -47,7 +47,7 @@ Ardından Inno Setup ile kurulum dosyasını üret:
 Çıktı:
 
 ```text
-dist-installer\WarThunderTurkiyeSetup-0.2.1.exe
+dist-installer\WarThunderTurkiyeSetup-0.2.2.exe
 ```
 
 Tauri ayrıca şurada NSIS kurulumu da üretir:
@@ -63,6 +63,31 @@ Uygulama, gizli ana pencerede `warthunder.tr` sayfasını yükler ve sayfaya kü
 İsteğe bağlı `warthunder-desktop-bridge` eklentisi, `/api/desktop/session` yedeğini ve `warthunder.tr` üzerinden güncelleme manifestini sağlar. Uygulama bu eklenti olmadan da Flarum oturumunu okuyabilir.
 
 Bas-konuş, siteye `WTTRDesktop.setPTT` üzerinden bildirilir. Social ses ayarlarında bas-konuş açık olmalıdır; masaüstü uygulamasındaki tuş yalnızca global kısayoldur ve Social tarafındaki tuştan bağımsız çalışır.
+
+## Kod imzalama
+
+Windows SmartScreen, Norton ve Smart App Control için **güvenilir bir kod imzalama sertifikası** gerekir. Depoda sertifika veya özel anahtar tutulmaz.
+
+### PFX dosyası ile
+
+```powershell
+$env:WTTR_SIGN_PFX = 'C:\path\to\certificate.pfx'
+$env:WTTR_SIGN_PASSWORD = 'pfx-password'
+powershell -ExecutionPolicy Bypass -File scripts\sign.ps1
+```
+
+### Sertifika mağazası / EV token ile
+
+Sertifikayı Windows sertifika mağazasına yükle, ardından thumbprint ile imzala:
+
+```powershell
+$env:WTTR_SIGN_THUMBPRINT = 'CERTIFICATE_THUMBPRINT'
+powershell -ExecutionPolicy Bypass -File scripts\sign.ps1
+```
+
+Script önce uygulama exe'sini imzalar, sonra Inno Setup paketini üretir ve paketi imzalar. Zaman damgası için `http://timestamp.digicert.com` kullanılır.
+
+> Self-signed sertifika yalnızca yerel testte kullanılabilir; başka bilgisayarlarda SmartScreen/Norton tarafından güvenilir sayılmaz. Dağıtım için OV veya EV kod imzalama sertifikası gerekir.
 
 ## Sorun giderme
 

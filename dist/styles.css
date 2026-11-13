@@ -1143,6 +1143,16 @@ h1 {
   }
 }
 
+.settings-mic-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.settings-mic-actions .btn {
+  flex: 1;
+}
+
 .settings-note {
   margin: 10px 0 14px;
   color: var(--muted);

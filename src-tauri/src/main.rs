@@ -7,9 +7,9 @@ use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     webview::PageLoadEvent,
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewUrl,
-    WebviewWindow, WebviewWindowBuilder, WindowEvent,
+    AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
+use tauri_plugin_notification::NotificationExt;
 
 fn log(message: &str) {
     use std::io::Write;
@@ -50,12 +50,14 @@ struct SessionState {
     display_name: Option<String>,
     avatar_url: Option<String>,
     unread: i64,
+    last_notification_id: Option<String>,
 }
 
 struct AppState {
     pending_auth: Arc<Mutex<Option<PendingAuth>>>,
     session: Arc<Mutex<SessionState>>,
     auth_pending: Arc<Mutex<bool>>,
+    auth_shell_pending: Arc<Mutex<bool>>,
 }
 
 #[derive(Clone, serde::Deserialize)]
@@ -68,6 +70,14 @@ struct BridgeUser {
 
 #[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct BridgeNotification {
+    id: Option<String>,
+    title: Option<String>,
+    body: Option<String>,
+}
+
+#[derive(Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct BridgeSession {
     #[serde(default)]
     authenticated: bool,
@@ -75,6 +85,8 @@ struct BridgeSession {
     user: Option<BridgeUser>,
     #[serde(default)]
     unread_notifications: i64,
+    #[serde(default)]
+    latest_notification: Option<BridgeNotification>,
     #[serde(default)]
     selftest: bool,
 }
@@ -85,6 +97,12 @@ struct DesktopSettings {
     ptt_key: String,
     ptt_enabled: bool,
     close_to_tray: bool,
+    #[serde(default = "notifications_default")]
+    notifications_enabled: bool,
+}
+
+fn notifications_default() -> bool {
+    true
 }
 
 impl Default for DesktopSettings {
@@ -93,6 +111,7 @@ impl Default for DesktopSettings {
             ptt_key: "AltLeft".to_string(),
             ptt_enabled: true,
             close_to_tray: true,
+            notifications_enabled: true,
         }
     }
 }
@@ -213,7 +232,8 @@ fn auth_script(auth: &PendingAuth) -> String {
         border-radius: 11px !important;
       }}
       .WTTRDesktopAuthLogo {{
-        width: 220px;
+        width: 96px;
+        height: 96px;
         max-width: 100%;
         display: block;
         margin: 0 auto 8px;
@@ -255,7 +275,7 @@ fn auth_script(auth: &PendingAuth) -> String {
 
     const logo = document.createElement('img');
     logo.className = 'WTTRDesktopAuthLogo';
-    logo.src = 'https://warthunder.tr/assets/site-image-dclte953.png';
+    logo.src = 'https://warthunder.tr/assets/pwa-icon-512x512-s8vyxeai.png';
     logo.alt = 'War Thunder Türkiye';
 
     const hint = document.createElement('p');
@@ -397,6 +417,495 @@ fn auth_script(auth: &PendingAuth) -> String {
     )
 }
 
+fn auth_shell_script() -> &'static str {
+    r##"
+(function () {
+  const styleId = 'wttr-desktop-auth-shell-style';
+  const existing = document.getElementById(styleId);
+
+  const cleanup = () => {
+    window.__wttrAuthShell = false;
+
+    if (window.__wttrAuthShellTimer) {
+      clearInterval(window.__wttrAuthShellTimer);
+      window.__wttrAuthShellTimer = null;
+    }
+
+    try {
+      localStorage.removeItem('wttrAuthMode');
+    } catch (error) {}
+
+    document.documentElement.classList.remove('wttr-auth-mode');
+    if (document.body) document.body.classList.remove('wttr-auth-mode');
+    document.getElementById('wttr-auth-shell-bg')?.remove();
+    document.getElementById('wttr-auth-shell-glow')?.remove();
+    document.getElementById('wttr-auth-shell-hero')?.remove();
+    document.getElementById('wttr-auth-veil')?.remove();
+    document.getElementById(styleId)?.remove();
+  };
+
+  window.__wttrAuthShellCleanup = cleanup;
+
+  if (!existing) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      html.wttr-auth-mode,
+      body.wttr-auth-mode {
+        overflow: hidden !important;
+      }
+
+      html.wttr-auth-mode *::-webkit-scrollbar {
+        width: 0 !important;
+        height: 0 !important;
+      }
+
+      #wttr-auth-shell-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 9990;
+        overflow: hidden;
+        pointer-events: none;
+        background: #070c0f;
+      }
+
+      #wttr-auth-shell-bg::before {
+        content: "";
+        position: absolute;
+        inset: -8%;
+        background: url("https://warthunder.tr/assets/files/2026-11-13/1794578974-624967-turkey-bundle-940h530-ba5ce7e7c62ff478bcd5b1e7fcdcbdd9-thumb.webp") center / cover no-repeat;
+        filter: saturate(.92) brightness(.72);
+        animation: wttr-bg-drift 28s ease-in-out infinite alternate;
+      }
+
+      #wttr-auth-shell-bg::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(180deg, rgba(7,11,14,.12) 0%, rgba(7,11,14,.36) 45%, rgba(7,11,14,.95) 100%),
+          linear-gradient(90deg, rgba(7,11,14,.82) 0%, rgba(7,11,14,.32) 56%, rgba(7,11,14,.58) 100%),
+          radial-gradient(760px 520px at 18% 82%, rgba(192,57,43,.28), transparent 70%);
+      }
+
+      #wttr-auth-shell-glow {
+        position: fixed;
+        right: 7vw;
+        top: 10vh;
+        z-index: 9991;
+        width: 38vw;
+        height: 38vw;
+        max-width: 540px;
+        max-height: 540px;
+        border-radius: 50%;
+        pointer-events: none;
+        background: radial-gradient(circle, rgba(192,57,43,.3), transparent 68%);
+        filter: blur(28px);
+        animation: wttr-glow-pulse 9s ease-in-out infinite;
+      }
+
+      #wttr-auth-shell-hero {
+        position: fixed;
+        left: clamp(28px, 7vw, 108px);
+        bottom: clamp(38px, 9vh, 104px);
+        z-index: 9992;
+        width: min(560px, 46vw);
+        pointer-events: none;
+        color: #eef4f6;
+      }
+
+      .WTTRDesktopHeroLogo {
+        width: 96px;
+        height: 96px;
+        display: block;
+        margin-bottom: 20px;
+        opacity: .98;
+        filter: drop-shadow(0 18px 36px rgba(0,0,0,.55));
+      }
+
+      .WTTRDesktopHeroEyebrow {
+        margin: 0 0 12px;
+        color: #d8b56a;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .2em;
+      }
+
+      .WTTRDesktopHeroTitle {
+        margin: 0;
+        max-width: 540px;
+        font-size: clamp(38px, 5vw, 70px);
+        line-height: .98;
+        letter-spacing: -.045em;
+        text-wrap: balance;
+        text-shadow: 0 18px 50px rgba(0,0,0,.4);
+      }
+
+      .WTTRDesktopHeroLead {
+        margin: 18px 0 0;
+        max-width: 510px;
+        color: #b6c5cb;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .WTTRDesktopHeroMeta {
+        margin: 20px 0 0;
+        color: #8fa2aa;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: .12em;
+      }
+
+      .WTTRDesktopHeroMeta span {
+        color: #d8b56a;
+        margin: 0 7px;
+      }
+
+      #cc-main,
+      .cc-window,
+      .cc-revoke {
+        display: none !important;
+      }
+
+      .ModalManager {
+        z-index: 9999 !important;
+        background: transparent !important;
+        backdrop-filter: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        padding: 24px clamp(24px, 8vw, 120px) !important;
+      }
+
+      .Modal-content {
+        width: 432px !important;
+        max-width: calc(100vw - 32px) !important;
+        margin: 0 !important;
+        padding: 26px !important;
+        background: linear-gradient(180deg, rgba(16,27,33,.97), rgba(10,19,24,.99)) !important;
+        border: 1px solid rgba(255,255,255,.12) !important;
+        border-radius: 24px !important;
+        box-shadow:
+          0 40px 100px rgba(0,0,0,.65),
+          inset 0 1px 0 rgba(255,255,255,.04) !important;
+        max-height: calc(100vh - 48px) !important;
+        overflow-y: auto !important;
+        animation: wttr-modal-in .55s cubic-bezier(.2,.8,.2,1) both;
+      }
+
+      .Modal-content .Modal-header {
+        border: 0 !important;
+        padding: 0 0 6px !important;
+      }
+
+      .Modal-content .Modal-header h3 {
+        font-size: 24px !important;
+        letter-spacing: -.025em;
+      }
+
+      .Modal-content .Modal-body {
+        padding: 0 !important;
+      }
+
+      .Modal-content .Modal-footer {
+        border: 0 !important;
+        padding: 14px 0 0 !important;
+      }
+
+      .Modal-content .FormControl {
+        background: #0b151a !important;
+        border: 1px solid rgba(255,255,255,.11) !important;
+        color: #eef4f6 !important;
+        border-radius: 11px !important;
+      }
+
+      .Modal-content .FormControl:focus {
+        border-color: rgba(224,90,79,.65) !important;
+        box-shadow: 0 0 0 3px rgba(192,57,43,.16) !important;
+      }
+
+      .Modal-content .Button--primary {
+        background: linear-gradient(135deg, #c0392b, #8f241b) !important;
+        border: 0 !important;
+        border-radius: 11px !important;
+        box-shadow: 0 12px 28px rgba(192,57,43,.28) !important;
+      }
+
+      .Modal-content .Modal-close {
+        display: none !important;
+      }
+
+      .WTTRDesktopAuthHint {
+        margin: 0 0 14px;
+        color: #93a6ae;
+        font-size: 11px;
+        line-height: 1.45;
+        text-align: center;
+      }
+
+      .WTTRDesktopAuthTabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin: 0 0 16px;
+        padding: 4px;
+        background: rgba(0,0,0,.24);
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 12px;
+      }
+
+      .WTTRDesktopAuthTabs button {
+        appearance: none;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: #93a6ae;
+        font: inherit;
+        font-size: 11.5px;
+        font-weight: 800;
+        padding: 9px 8px;
+        cursor: pointer;
+        transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+      }
+
+      .WTTRDesktopAuthTabs button.is-active {
+        background: #c0392b;
+        color: #fff;
+        box-shadow: 0 6px 18px rgba(192,57,43,.3);
+      }
+
+      .WTTRDesktopAuthTabs button:not(.is-active):hover {
+        color: #fff;
+        background: rgba(255,255,255,.06);
+      }
+
+      @keyframes wttr-bg-drift {
+        0% { transform: scale(1.03) translate3d(-1%, 0, 0); }
+        100% { transform: scale(1.13) translate3d(1.6%, -1.2%, 0); }
+      }
+
+      @keyframes wttr-glow-pulse {
+        0%, 100% { opacity: .32; transform: scale(1); }
+        50% { opacity: .55; transform: scale(1.08); }
+      }
+
+      @keyframes wttr-modal-in {
+        from { opacity: 0; transform: translateY(18px) scale(.985); }
+        to { opacity: 1; transform: none; }
+      }
+
+      @media (max-width: 980px) {
+        #wttr-auth-shell-hero,
+        #wttr-auth-shell-glow {
+          display: none;
+        }
+
+        .ModalManager {
+          justify-content: center !important;
+          padding: 20px !important;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+
+    try {
+      localStorage.setItem('wttrAuthMode', '1');
+    } catch (error) {}
+
+    document.documentElement.classList.add('wttr-auth-mode');
+    if (document.body) document.body.classList.add('wttr-auth-mode');
+
+    const background = document.createElement('div');
+    background.id = 'wttr-auth-shell-bg';
+    document.body.appendChild(background);
+
+    const glow = document.createElement('div');
+    glow.id = 'wttr-auth-shell-glow';
+    document.body.appendChild(glow);
+
+    const hero = document.createElement('div');
+    hero.id = 'wttr-auth-shell-hero';
+    hero.innerHTML = `
+      <img class="WTTRDesktopHeroLogo" src="https://warthunder.tr/assets/pwa-icon-512x512-s8vyxeai.png" alt="War Thunder Türkiye" />
+      <p class="WTTRDesktopHeroEyebrow">WAR THUNDER TÜRKİYE</p>
+      <h1 class="WTTRDesktopHeroTitle">Topluluğa katıl.</h1>
+      <p class="WTTRDesktopHeroLead">
+        Forum, sosyal akış ve sesli odalar tek uygulamada. Gerçek Flarum hesabınla
+        giriş yap, topluluğa kaldığın yerden devam et.
+      </p>
+      <p class="WTTRDesktopHeroMeta">FORUM <span>·</span> SOSYAL <span>·</span> SESLİ ODALAR</p>
+    `;
+    document.body.appendChild(hero);
+    document.getElementById('wttr-auth-veil')?.remove();
+  }
+
+  let switching = false;
+
+  const openAuth = (mode) => {
+    try {
+      if (window.app && window.app.session && window.app.session.user) return;
+      if (switching) return;
+
+      switching = true;
+
+      try {
+        if (window.app && window.app.modal && window.app.modal.close) {
+          window.app.modal.close();
+        }
+      } catch (error) {}
+
+      setTimeout(() => {
+        try {
+          if (window.WTTRDesktop && typeof window.WTTRDesktop.openAuth === 'function') {
+            window.WTTRDesktop.openAuth(mode);
+          } else if (window.app && window.app.modal) {
+            const name = mode === 'register'
+              ? 'forum/components/SignUpModal'
+              : 'forum/components/LogInModal';
+            const component = window.flarum && window.flarum.reg
+              ? window.flarum.reg.get('core', name)
+              : null;
+
+            if (component) window.app.modal.show(component);
+          }
+        } catch (error) {}
+        switching = false;
+      }, 120);
+    } catch (error) {
+      switching = false;
+    }
+  };
+
+  const decorate = () => {
+    const body = document.querySelector('.Modal-content .Modal-body');
+    if (!body) return;
+
+    if (!body.querySelector('.WTTRDesktopAuthHint')) {
+      const hint = document.createElement('p');
+      hint.className = 'WTTRDesktopAuthHint';
+      hint.textContent = 'War Thunder Türkiye hesabınla devam et.';
+      body.insertBefore(hint, body.firstChild);
+    }
+
+    const isRegister = Boolean(document.querySelector('.Modal-content input[name="email"]'));
+    let tabs = body.querySelector('.WTTRDesktopAuthTabs');
+
+    if (!tabs) {
+      tabs = document.createElement('div');
+      tabs.className = 'WTTRDesktopAuthTabs';
+
+      const login = document.createElement('button');
+      login.type = 'button';
+      login.textContent = 'Giriş Yap';
+      login.addEventListener('click', () => openAuth('login'));
+
+      const register = document.createElement('button');
+      register.type = 'button';
+      register.textContent = 'Kayıt Ol';
+      register.addEventListener('click', () => openAuth('register'));
+
+      tabs.appendChild(login);
+      tabs.appendChild(register);
+      body.insertBefore(tabs, body.firstChild);
+    }
+
+    const buttons = tabs.querySelectorAll('button');
+
+    if (buttons.length === 2) {
+      buttons[0].classList.toggle('is-active', !isRegister);
+      buttons[1].classList.toggle('is-active', isRegister);
+    }
+
+    const remember = document.querySelector('.Modal-content input[name="remember"]')
+      || document.querySelector('.Modal-content input[type="checkbox"]');
+
+    if (remember && !remember.checked) {
+      remember.click();
+
+      if (!remember.checked) {
+        remember.checked = true;
+        remember.dispatchEvent(new Event('input', { bubbles: true }));
+        remember.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  };
+
+  const tick = () => {
+    if (switching) return;
+
+    try {
+      if (window.app && window.app.session && window.app.session.user) {
+        cleanup();
+        return;
+      }
+    } catch (error) {}
+
+    if (!document.querySelector('.Modal-content')) {
+      openAuth('login');
+    } else {
+      decorate();
+    }
+  };
+
+  setTimeout(tick, 400);
+
+  if (!window.__wttrAuthShellTimer) {
+    window.__wttrAuthShellTimer = setInterval(tick, 700);
+  }
+})();
+"##
+}
+
+fn auth_veil_script() -> &'static str {
+    r#"
+(function () {
+  if (location.hostname !== 'warthunder.tr') return;
+
+  const addVeil = () => {
+    let authMode = false;
+
+    try {
+      authMode = localStorage.getItem('wttrAuthMode') === '1';
+    } catch (error) {}
+
+    if (!authMode || document.getElementById('wttr-auth-veil')) return;
+
+    const veil = document.createElement('div');
+    veil.id = 'wttr-auth-veil';
+    veil.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#070c0f;display:flex;align-items:center;justify-content:center;pointer-events:none;';
+
+    const logo = document.createElement('img');
+    logo.src = 'https://warthunder.tr/assets/pwa-icon-512x512-s8vyxeai.png';
+    logo.alt = 'War Thunder Türkiye';
+    logo.style.cssText = 'width:92px;height:92px;opacity:.92;filter:drop-shadow(0 16px 36px rgba(0,0,0,.65));';
+
+    veil.appendChild(logo);
+    (document.body || document.documentElement).appendChild(veil);
+
+    setTimeout(() => veil.remove(), 6000);
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addVeil);
+  } else {
+    addVeil();
+  }
+})();
+"#
+}
+
+fn cleanup_auth_shell_script() -> &'static str {
+    r#"
+try {
+  if (window.__wttrAuthShellCleanup) {
+    window.__wttrAuthShellCleanup();
+  }
+} catch (error) {}
+"#
+}
+
 fn session_script() -> &'static str {
     r#"
 (function () {
@@ -455,9 +964,64 @@ fn session_script() -> &'static str {
     }
   };
 
+  let cachedNotification = null;
+  let notificationFetchedAt = 0;
+
+  const stripHtml = (value) => {
+    if (!value) return '';
+
+    const element = document.createElement('div');
+    element.innerHTML = String(value);
+    return (element.textContent || '').replace(/\s+/g, ' ').trim();
+  };
+
+  const latestNotification = async () => {
+    const now = Date.now();
+    if (now - notificationFetchedAt < 5000) return cachedNotification;
+    notificationFetchedAt = now;
+
+    try {
+      const response = await fetch('/api/notifications?page[limit]=1&sort=-createdAt', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      });
+
+      if (!response.ok) {
+        cachedNotification = null;
+        return null;
+      }
+
+      const payload = await response.json();
+      const item = payload.data && payload.data[0];
+
+      if (!item) {
+        cachedNotification = null;
+        return null;
+      }
+
+      const attributes = item.attributes || {};
+      const body = stripHtml(attributes.content || attributes.title || '');
+
+      cachedNotification = {
+        id: String(item.id),
+        title: 'War Thunder Türkiye',
+        body: body || 'Yeni bir bildirimin var.'
+      };
+
+      return cachedNotification;
+    } catch (error) {
+      return cachedNotification;
+    }
+  };
+
   const report = async () => {
     const session = fromFlarum() || await fromApi();
     if (!session) return;
+
+    if (session.authenticated && Number(session.unreadNotifications) > 0) {
+      const notification = await latestNotification();
+      if (notification) session.latestNotification = notification;
+    }
 
     const encoded = JSON.stringify(session);
     if (encoded === last) return;
@@ -750,9 +1314,22 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
         return;
     }
 
+    if let Some(notification) = payload.latest_notification.as_ref() {
+        log(&format!("notification:payload:{:?}", notification.id));
+    }
+
+    let notifications_enabled = app
+        .state::<SettingsState>()
+        .0
+        .lock()
+        .map(|settings| settings.notifications_enabled)
+        .unwrap_or(true);
+
+    let mut notification_to_show: Option<BridgeNotification> = None;
     let snapshot;
     let changed;
     let was_authenticated;
+    let was_known;
 
     {
         let state = app.state::<AppState>();
@@ -761,6 +1338,8 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
         };
 
         was_authenticated = session.authenticated;
+        was_known = session.known;
+        let previous_notification = session.last_notification_id.clone();
 
         let next_username = payload.user.as_ref().and_then(|user| user.username.clone());
         let next_display_name = payload
@@ -783,6 +1362,25 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
         session.avatar_url = next_avatar_url;
         session.unread = payload.unread_notifications;
 
+        if payload.authenticated {
+            if let Some(notification) = payload.latest_notification.as_ref() {
+                session.last_notification_id = notification.id.clone();
+            }
+        } else {
+            session.last_notification_id = None;
+        }
+
+        if notifications_enabled && payload.authenticated && payload.unread_notifications > 0 {
+            if let Some(notification) = payload.latest_notification.as_ref() {
+                let is_new = notification.id.is_some()
+                    && notification.id != previous_notification;
+
+                if is_new {
+                    notification_to_show = Some(notification.clone());
+                }
+            }
+        }
+
         snapshot = session.clone();
     }
 
@@ -790,14 +1388,20 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
         let _ = app.emit_to("dashboard", "session-changed", session_json(&snapshot));
     }
 
+    if let Some(notification) = notification_to_show {
+        show_native_notification(app, &notification);
+    }
+
     if snapshot.authenticated {
         if let Ok(mut pending) = app.state::<AppState>().auth_pending.lock() {
             *pending = false;
         }
-    }
 
-    if snapshot.authenticated != was_authenticated {
-        show_dashboard(app);
+        if !was_known || !was_authenticated {
+            show_dashboard(app);
+        }
+    } else if snapshot.known && (!was_known || was_authenticated) {
+        show_auth_main(app);
     }
 }
 
@@ -836,7 +1440,93 @@ fn handle_bridge_navigation(app: &AppHandle, url: &tauri::Url) {
     }
 }
 
+fn cleanup_auth_shell(app: &AppHandle) {
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.eval(cleanup_auth_shell_script());
+    }
+
+    if let Ok(mut pending) = app.state::<AppState>().auth_shell_pending.lock() {
+        *pending = false;
+    }
+}
+
+fn show_native_notification(app: &AppHandle, notification: &BridgeNotification) {
+    let title = notification
+        .title
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("War Thunder Türkiye");
+    let body = notification
+        .body
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("Yeni bir bildirimin var.");
+
+    match app.notification().builder().title(title).body(body).show() {
+        Ok(_) => log("notification:shown"),
+        Err(error) => log(&format!("notification:error:{error}")),
+    }
+}
+
+fn show_auth_main(app: &AppHandle) {
+    let Some(main) = app.get_webview_window("main") else {
+        return;
+    };
+
+    let on_site = main
+        .url()
+        .ok()
+        .and_then(|url| url.host_str().map(|host| host == SITE_HOST))
+        .unwrap_or(false);
+
+    if let Ok(mut pending) = app.state::<AppState>().auth_shell_pending.lock() {
+        *pending = true;
+    }
+
+    let _ = main.eval("try { localStorage.setItem('wttrAuthMode', '1'); } catch (error) {}");
+
+    if on_site {
+        let _ = main.eval(auth_shell_script());
+
+        if let Ok(mut pending) = app.state::<AppState>().auth_shell_pending.lock() {
+            *pending = false;
+        }
+    } else {
+        let parsed = match tauri::Url::parse(AUTH_URL) {
+            Ok(url) => url,
+            Err(error) => {
+                log(&format!("auth_shell:navigate:error:{error}"));
+                return;
+            }
+        };
+
+        if let Err(error) = main.navigate(parsed) {
+            log(&format!("auth_shell:navigate:error:{error}"));
+            return;
+        }
+    }
+
+    let _ = main.show();
+    let _ = main.set_focus();
+
+    if let Some(dashboard) = app.get_webview_window("dashboard") {
+        let _ = dashboard.hide();
+    }
+}
+
+fn show_home(app: &AppHandle) {
+    if is_authenticated(app) {
+        show_dashboard(app);
+    } else {
+        show_auth_main(app);
+    }
+}
+
 fn show_dashboard(app: &AppHandle) {
+    cleanup_auth_shell(app);
+
     if let Some(main) = app.get_webview_window("main") {
         let _ = main.hide();
     }
@@ -851,6 +1541,10 @@ fn show_main(app: &AppHandle, url: &str) -> Result<(), String> {
     let main = app
         .get_webview_window("main")
         .ok_or_else(|| "main window is not available".to_string())?;
+
+    if is_authenticated(app) {
+        cleanup_auth_shell(app);
+    }
 
     let parsed = tauri::Url::parse(url).map_err(|error| error.to_string())?;
     main.navigate(parsed).map_err(|error| error.to_string())?;
@@ -868,28 +1562,8 @@ fn open_authenticated(app: &AppHandle, url: &str) {
     if is_authenticated(app) {
         let _ = show_main(app, url);
     } else {
-        show_dashboard(app);
+        show_auth_main(app);
     }
-}
-
-fn place_on_second_monitor(app: &AppHandle, window: &WebviewWindow, fallback: PhysicalSize<u32>) {
-    let Ok(monitors) = app.available_monitors() else {
-        return;
-    };
-
-    if monitors.len() < 2 {
-        return;
-    }
-
-    let monitor = &monitors[1];
-    let position = monitor.position();
-    let size = monitor.size();
-    let window_size = window.outer_size().unwrap_or(fallback);
-
-    let x = position.x + ((size.width as i32 - window_size.width as i32) / 2).max(0);
-    let y = position.y + ((size.height as i32 - window_size.height as i32) / 2).max(0);
-
-    let _ = window.set_position(PhysicalPosition::new(x, y));
 }
 
 #[derive(serde::Serialize)]
@@ -1142,6 +1816,48 @@ fn save_settings(
     persist_settings(&app, &settings);
     log("save_settings:done");
     Ok(())
+}
+
+#[tauri::command]
+fn test_notification(app: AppHandle) -> Result<(), String> {
+    app.notification()
+        .builder()
+        .title("War Thunder Türkiye")
+        .body("Bildirimler aktif. Yeni bildirimler burada görünecek.")
+        .show()
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn request_microphone(app: AppHandle) -> Result<(), String> {
+    let script = r#"
+(async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+    window.__wttrMicTest = 'ok';
+  } catch (error) {
+    window.__wttrMicTest = String(error);
+  }
+})();
+"#;
+
+    let mut started = false;
+
+    for label in ["dashboard", "main"] {
+        if let Some(window) = app.get_webview_window(label) {
+            if window.eval(script).is_ok() {
+                started = true;
+            }
+        }
+    }
+
+    if started {
+        Ok(())
+    } else {
+        Err("no window available".to_string())
+    }
 }
 
 #[tauri::command]
@@ -1487,14 +2203,13 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let forum = MenuItem::with_id(app, "forum", "Forum", true, None::<&str>)?;
     let blog = MenuItem::with_id(app, "blog", "Blog", true, None::<&str>)?;
     let social = MenuItem::with_id(app, "social", "Sosyal", true, None::<&str>)?;
-    let monitor2 = MenuItem::with_id(app, "monitor2", "2. Monitöre Taşı", true, None::<&str>)?;
     let reload = MenuItem::with_id(app, "reload", "Yenile", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Çıkış", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
 
     let menu = Menu::with_items(
         app,
-        &[&home, &forum, &blog, &social, &separator, &monitor2, &reload, &quit],
+        &[&home, &forum, &blog, &social, &separator, &reload, &quit],
     )?;
 
     let icon = match app.default_window_icon() {
@@ -1507,18 +2222,10 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
-            "home" => show_dashboard(app),
+            "home" => show_home(app),
             "forum" => open_authenticated(app, FORUM_URL),
             "blog" => open_authenticated(app, BLOG_URL),
             "social" => open_authenticated(app, SOCIAL_URL),
-            "monitor2" => {
-                if let Some(dashboard) = app.get_webview_window("dashboard") {
-                    place_on_second_monitor(app, &dashboard, PhysicalSize::new(1120, 780));
-                }
-                if let Some(main) = app.get_webview_window("main") {
-                    place_on_second_monitor(app, &main, PhysicalSize::new(1280, 860));
-                }
-            }
             "reload" => {
                 if let Some(dashboard) = app.get_webview_window("dashboard") {
                     if dashboard.is_visible().unwrap_or(false) {
@@ -1541,7 +2248,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 ..
             } = event
             {
-                show_dashboard(tray.app_handle());
+                show_home(tray.app_handle());
             }
         })
         .build(app)?;
@@ -1560,12 +2267,14 @@ pub fn run() {
     let pending_auth = Arc::new(Mutex::new(None::<PendingAuth>));
     let session = Arc::new(Mutex::new(SessionState::default()));
     let auth_pending = Arc::new(Mutex::new(false));
+    let auth_shell_pending = Arc::new(Mutex::new(false));
     let settings = Arc::new(Mutex::new(DesktopSettings::default()));
 
     let pending_for_setup = pending_auth.clone();
     let settings_for_setup = settings.clone();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(main) = app.get_webview_window("main") {
                 if main.is_visible().unwrap_or(false) {
@@ -1575,12 +2284,13 @@ pub fn run() {
                 }
             }
 
-            show_dashboard(app);
+            show_home(app);
         }))
         .manage(AppState {
             pending_auth: pending_auth.clone(),
             session: session.clone(),
             auth_pending: auth_pending.clone(),
+            auth_shell_pending: auth_shell_pending.clone(),
         })
         .manage(SettingsState(settings.clone()))
         .invoke_handler(tauri::generate_handler![
@@ -1593,8 +2303,10 @@ pub fn run() {
             get_latest_discussions,
             get_settings,
             save_settings,
+            request_microphone,
             open_microphone_settings,
             get_session,
+            test_notification,
             check_for_updates,
             install_update
         ])
@@ -1619,6 +2331,8 @@ pub fn run() {
 
             log("setup:dashboard-built");
 
+            let app_for_load = app.handle().clone();
+
             let main = WebviewWindowBuilder::new(
                 app,
                 "main",
@@ -1631,6 +2345,7 @@ pub fn run() {
             .min_inner_size(980.0, 640.0)
             .center()
             .visible(false)
+            .initialization_script(auth_veil_script())
             .on_navigation({
                 let app_handle = app.handle().clone();
 
@@ -1658,8 +2373,29 @@ pub fn run() {
                     .lock()
                     .ok()
                     .and_then(|mut pending| pending.take());
+                let has_auth_request = auth.is_some();
 
                 let _ = webview.eval(session_script());
+
+                let should_show_auth_shell = {
+                    let state = app_for_load.state::<AppState>();
+                    let pending = state
+                        .auth_shell_pending
+                        .lock()
+                        .map(|mut pending| std::mem::replace(&mut *pending, false))
+                        .unwrap_or(false);
+                    let guest = state
+                        .session
+                        .lock()
+                        .map(|session| session.known && !session.authenticated)
+                        .unwrap_or(false);
+
+                    pending || guest
+                };
+
+                if should_show_auth_shell && !has_auth_request {
+                    let _ = webview.eval(auth_shell_script());
+                }
 
                 if let Some(auth) = auth {
                     let _ = webview.eval(auth_script(&auth));
@@ -1708,7 +2444,7 @@ pub fn run() {
                 api.prevent_close();
                 let _ = window.hide();
 
-                if window.label() == "main" {
+                if window.label() == "main" && is_authenticated(window.app_handle()) {
                     show_dashboard(window.app_handle());
                 }
             }

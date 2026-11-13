@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Default capability for the local dashboard window",
   "windows": ["dashboard"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "notification:default"]
 }

@@ -25,9 +25,10 @@ const state = {
     unreadNotifications: 0,
   },
   settings: {
-    pttKey: 'alt',
+    pttKey: 'AltLeft',
     pttEnabled: true,
     closeToTray: true,
+    notificationsEnabled: true,
   },
   topicsLoaded: false,
   topicsLoading: false,
@@ -471,9 +472,11 @@ const updatePttStatus = () => {
 const fillSettingsForm = () => {
   const enabled = $('#setting-ptt-enabled');
   const tray = $('#setting-close-to-tray');
+  const notifications = $('#setting-notifications');
 
   if (enabled) enabled.checked = Boolean(state.settings.pttEnabled);
   if (tray) tray.checked = Boolean(state.settings.closeToTray);
+  if (notifications) notifications.checked = state.settings.notificationsEnabled !== false;
 
   updatePttStatus();
 };
@@ -569,10 +572,26 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && !state.capturing) closeSettings();
 });
 
+$('#setting-mic-test')?.addEventListener('click', () => {
+  invoke('request_microphone')
+    .then(() => {
+      showToast('Mikrofon izni istendi. İzin verip Windows ayarlarını aç.');
+    })
+    .catch(() => {
+      showToast('Mikrofon testi başlatılamadı.', 'error');
+    });
+});
+
 $('#setting-mic')?.addEventListener('click', () => {
   invoke('open_microphone_settings').catch(() => {
     showToast('Mikrofon ayarları açılamadı.', 'error');
   });
+});
+
+$('#notification-test')?.addEventListener('click', () => {
+  invoke('test_notification')
+    .then(() => showToast('Test bildirimi gönderildi.'))
+    .catch(() => showToast('Bildirim gönderilemedi. Windows bildirim iznini kontrol et.', 'error'));
 });
 
 $('#settings-save')?.addEventListener('click', () => {
@@ -580,6 +599,7 @@ $('#settings-save')?.addEventListener('click', () => {
     pttKey: state.settings.pttKey,
     pttEnabled: Boolean($('#setting-ptt-enabled')?.checked),
     closeToTray: Boolean($('#setting-close-to-tray')?.checked),
+    notificationsEnabled: Boolean($('#setting-notifications')?.checked),
   };
 
   const button = $('#settings-save');
