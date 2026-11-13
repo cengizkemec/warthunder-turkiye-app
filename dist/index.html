@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>War Thunder Türkiye</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <img class="brand" src="logo-wide.png" alt="War Thunder Türkiye" />
+        <button class="icon-btn" id="settings-open" type="button" aria-label="Ayarlar" title="Ayarlar">⚙</button>
+      </header>
+
+      <main>
+        <section class="auth-shell">
+          <div class="auth-art">
+            <p class="eyebrow">WAR THUNDER TÜRKİYE</p>
+            <h1>Topluluğa katıl.</h1>
+            <p class="lead">
+              Forum, blog ve sosyal alan tek uygulamada. Global bas-konuş ile sesli odalarda
+              tarayıcı kısıtlaması olmadan konuş.
+            </p>
+          </div>
+
+          <div class="auth-panel">
+            <div class="auth-tabs" role="tablist">
+              <button class="auth-tab is-active" type="button" data-authtab="login">Giriş Yap</button>
+              <button class="auth-tab" type="button" data-authtab="register">Kayıt Ol</button>
+            </div>
+
+            <form id="login-form" class="auth-form">
+              <label class="auth-field">
+                <span>Kullanıcı adı veya e-posta</span>
+                <input id="login-identification" type="text" autocomplete="username" placeholder="kullanici_adi" required />
+              </label>
+              <label class="auth-field">
+                <span>Şifre</span>
+                <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+              </label>
+              <button class="btn btn-primary btn-block" type="submit">Giriş Yap</button>
+            </form>
+
+            <form id="register-form" class="auth-form is-hidden">
+              <label class="auth-field">
+                <span>Kullanıcı adı</span>
+                <input id="register-username" type="text" autocomplete="username" placeholder="kullanici_adi" required />
+              </label>
+              <label class="auth-field">
+                <span>E-posta</span>
+                <input id="register-email" type="email" autocomplete="email" placeholder="ornek@eposta.com" required />
+              </label>
+              <label class="auth-field">
+                <span>Şifre</span>
+                <input id="register-password" type="password" autocomplete="new-password" placeholder="••••••••" required />
+              </label>
+              <button class="btn btn-primary btn-block" type="submit">Kayıt Ol</button>
+            </form>
+
+            <p class="auth-note">
+              Güvenli giriş ekranı açılır ve bilgilerin hazır gelir. Güvenlik doğrulaması istenebilir.
+            </p>
+
+            <div class="auth-guest">
+              <span>Giriş yapmadan devam et:</span>
+              <button type="button" data-section="forum">Forum</button>
+              <button type="button" data-section="blog">Blog</button>
+              <button type="button" data-section="social">Sosyal</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="cards" aria-label="Bölümler">
+          <button class="card" type="button" data-section="forum">
+            <span class="card-icon">▤</span>
+            <span class="card-copy">
+              <strong>Forum</strong>
+              <span>Tüm tartışmalar, duyurular ve topluluk.</span>
+            </span>
+            <span class="card-arrow">→</span>
+          </button>
+
+          <button class="card" type="button" data-section="blog">
+            <span class="card-icon">✎</span>
+            <span class="card-copy">
+              <strong>Blog</strong>
+              <span>Haberler, rehberler ve güncellemeler.</span>
+            </span>
+            <span class="card-arrow">→</span>
+          </button>
+
+          <button class="card card-accent" type="button" data-section="social">
+            <span class="card-icon">◉</span>
+            <span class="card-copy">
+              <strong>Sosyal</strong>
+              <span>Akış, medya, odalar ve sesli sohbet.</span>
+            </span>
+            <span class="card-arrow">→</span>
+          </button>
+        </section>
+
+        <section class="voice-panel">
+          <div class="section-head">
+            <div>
+              <span class="section-kicker">SESLİ SOHBET</span>
+              <h2>Sesli odalarda konuş</h2>
+            </div>
+          </div>
+          <div class="voice-row">
+            <p>Bas-konuş tuşunu Ayarlar’dan seç. Uygulama arka planda olsa bile mikrofon çalışır.</p>
+            <div class="voice-controls">
+              <span class="ptt-status">Bas-konuş: <strong id="ptt-status">Alt</strong></span>
+              <button class="btn btn-compact" type="button" data-open-settings>Ayarlar</button>
+              <button class="btn btn-compact" type="button" data-section="social">Sesli odalara git</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="latest-panel">
+          <div class="section-head">
+            <div>
+              <span class="section-kicker">FORUM</span>
+              <h2>Son açılan konular</h2>
+            </div>
+            <button class="text-link" type="button" data-section="forum">Tümünü gör →</button>
+          </div>
+          <div id="latest-discussions" class="discussion-list">
+            <div class="discussion-loading">Konular yükleniyor…</div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span>War Thunder Türkiye · warthunder.tr</span>
+        <span>v0.1.0</span>
+      </footer>
+    </div>
+
+    <div id="settings-modal" class="settings-overlay is-hidden" aria-hidden="true">
+      <div class="settings-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="settings-head">
+          <div>
+            <span class="section-kicker">UYGULAMA</span>
+            <h2 id="settings-title">Ayarlar</h2>
+          </div>
+          <button class="icon-btn" id="settings-close" type="button" aria-label="Kapat">✕</button>
+        </div>
+
+        <label class="setting-row">
+          <span>
+            <strong>Bas-konuş</strong>
+            <small>Tuşu basılı tutunca mikrofon açılır.</small>
+          </span>
+          <input type="checkbox" id="setting-ptt-enabled" />
+        </label>
+
+        <label class="setting-row">
+          <span>
+            <strong>Bas-konuş tuşu</strong>
+            <small>Sesli odalarda kullanılacak tuş.</small>
+          </span>
+          <select id="setting-ptt-key">
+            <option value="alt">Alt</option>
+            <option value="v">V</option>
+            <option value="f">F</option>
+          </select>
+        </label>
+
+        <label class="setting-row">
+          <span>
+            <strong>2. monitörde aç</strong>
+            <small>Uygulama penceresini ikinci ekranda açar.</small>
+          </span>
+          <input type="checkbox" id="setting-second-monitor" />
+        </label>
+
+        <label class="setting-row">
+          <span>
+            <strong>Kapatınca tepsiye küçült</strong>
+            <small>Kapatma düğmesi uygulamayı sonlandırmaz.</small>
+          </span>
+          <input type="checkbox" id="setting-close-to-tray" />
+        </label>
+
+        <button class="btn btn-block" type="button" id="setting-mic">Mikrofon izin ayarlarını aç</button>
+        <p class="settings-note">Mikrofon izni Windows gizlilik ayarlarından yönetilir.</p>
+
+        <button class="btn btn-primary btn-block" type="button" id="settings-save">Kaydet</button>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
