@@ -6,14 +6,38 @@
     <title>War Thunder Türkiye</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
+  <body data-session="checking">
     <div class="app">
       <header class="topbar">
         <img class="brand" src="logo-wide.png" alt="War Thunder Türkiye" />
-        <button class="icon-btn" id="settings-open" type="button" aria-label="Ayarlar" title="Ayarlar">⚙</button>
+        <div class="topbar-actions">
+          <div class="account-chip" id="account-chip">
+            <span class="avatar" id="account-avatar">
+              <span id="account-initial">W</span>
+              <img id="account-avatar-img" alt="" hidden />
+            </span>
+            <span class="account-copy">
+              <strong id="account-name">Asker</strong>
+              <small id="account-username">@warthunder</small>
+            </span>
+            <span class="unread-badge" id="account-unread" hidden>0</span>
+            <button class="chip-action" id="logout-button" type="button" title="Oturumu kapat">Çıkış</button>
+          </div>
+          <button class="icon-btn" id="settings-open" type="button" aria-label="Ayarlar" title="Ayarlar">⚙</button>
+        </div>
       </header>
 
-      <main>
+      <div class="update-banner" id="update-banner" hidden>
+        <span class="update-mark">↑</span>
+        <div class="update-copy">
+          <strong id="update-title">Yeni sürüm hazır</strong>
+          <small id="update-note">Güncellemeyi indirip kurmak için tıkla.</small>
+        </div>
+        <button class="btn btn-compact btn-primary" id="update-install" type="button">Güncelle</button>
+        <button class="icon-btn update-dismiss" id="update-dismiss" type="button" aria-label="Gizle">✕</button>
+      </div>
+
+      <main class="view view-guest" id="guest-view">
         <section class="auth-shell">
           <div class="auth-art">
             <p class="eyebrow">WAR THUNDER TÜRKİYE</p>
@@ -39,6 +63,11 @@
                 <span>Şifre</span>
                 <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" required />
               </label>
+              <label class="auth-remember">
+                <input id="login-remember" type="checkbox" checked />
+                <span>Beni hatırla</span>
+              </label>
+              <p class="form-error" id="login-error" hidden></p>
               <button class="btn btn-primary btn-block" type="submit">Giriş Yap</button>
             </form>
 
@@ -55,21 +84,131 @@
                 <span>Şifre</span>
                 <input id="register-password" type="password" autocomplete="new-password" placeholder="••••••••" required />
               </label>
+              <p class="form-error" id="register-error" hidden></p>
               <button class="btn btn-primary btn-block" type="submit">Kayıt Ol</button>
             </form>
 
             <p class="auth-note">
-              Güvenli giriş ekranı açılır ve bilgilerin hazır gelir. Güvenlik doğrulaması istenebilir.
+              Devam ettiğinde güvenli giriş penceresi açılır. Güvenlik doğrulaması istenebilir.
+              Giriş yaptığın sürece bu cihazda oturumun açık kalır.
             </p>
-
-            <div class="auth-guest">
-              <span>Giriş yapmadan devam et:</span>
-              <button type="button" data-section="forum">Forum</button>
-              <button type="button" data-section="blog">Blog</button>
-              <button type="button" data-section="social">Sosyal</button>
-            </div>
           </div>
         </section>
+      </main>
+
+      <main class="view view-app" id="app-view">
+        <section class="welcome-panel">
+          <div class="welcome-user">
+            <span class="avatar avatar-lg" id="welcome-avatar">
+              <span id="welcome-initial">W</span>
+              <img id="welcome-avatar-img" alt="" hidden />
+            </span>
+            <div class="welcome-copy">
+              <span class="section-kicker">TEKRAR HOŞ GELDİN</span>
+              <h1 id="welcome-name">Asker</h1>
+              <p>
+                Forum, sosyal akış ve sesli odalar tek yerde. Bas-konuş:
+                <strong id="welcome-ptt">Alt</strong>
+              </p>
+            </div>
+          </div>
+          <div class="welcome-side">
+            <span class="online-pill"><i></i> Çevrimiçi</span>
+            <span class="welcome-unread" id="welcome-unread">0 okunmamış bildirim</span>
+          </div>
+        </section>
+
+        <nav class="site-nav" aria-label="Site bağlantıları">
+          <span class="site-nav-label">KEŞFET</span>
+          <div class="site-nav-items">
+            <button class="site-nav-item" type="button" data-url="https://warthunder.tr/all">
+              <span class="nav-glyph">▤</span>Forum
+            </button>
+            <button class="site-nav-item" type="button" data-url="https://warthunder.tr/social">
+              <span class="nav-glyph">◉</span>Sosyal
+            </button>
+            <button class="site-nav-item" type="button" data-url="https://warthunder.tr/p/5-discord">
+              <span class="nav-glyph">◍</span>Discord
+            </button>
+            <button class="site-nav-item" type="button" data-url="https://warthunder.tr/support">
+              <span class="nav-glyph">✚</span>Destek
+            </button>
+
+            <details class="site-nav-group">
+              <summary class="site-nav-item">
+                <span class="nav-glyph">↓</span>İndir<span class="nav-chevron">▾</span>
+              </summary>
+              <div class="site-nav-menu">
+                <button type="button" data-url="https://warthunder.tr/p/17-war-thunder-pc-indir">
+                  <span>War Thunder PC</span><small>Resmi istemci</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/p/19-war-thunder-mobile-indir">
+                  <span>War Thunder Mobile</span><small>Mobil sürüm</small>
+                </button>
+              </div>
+            </details>
+
+            <details class="site-nav-group">
+              <summary class="site-nav-item">
+                <span class="nav-glyph">⚙</span>Araçlar<span class="nav-chevron">▾</span>
+              </summary>
+              <div class="site-nav-menu">
+                <button type="button" data-url="https://warthunder.tr/araclar/">
+                  <span>WT Araçlar</span><small>Araç veritabanı</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/araclar/telemetri/">
+                  <span>Telemetri</span><small>Uçuş ve savaş verisi</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/p/7-blk-yukle">
+                  <span>BLK Yükle</span><small>Dosya paylaşımı</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/p/8-ping-testi">
+                  <span>Ping Testi</span><small>Bağlantı ölçümü</small>
+                </button>
+              </div>
+            </details>
+
+            <details class="site-nav-group">
+              <summary class="site-nav-item">
+                <span class="nav-glyph">▷</span>TV<span class="nav-chevron">▾</span>
+              </summary>
+              <div class="site-nav-menu">
+                <button type="button" data-url="https://warthunder.tr/p/13-fsmkanuni">
+                  <span>FsmKanuni</span><small>Twitch</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/p/15-bylunaci">
+                  <span>ByLunaci</span><small>Yayın</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/p/16-yasha">
+                  <span>yasha</span><small>YouTube</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/p/14-kamikashiy">
+                  <span>kamikashiy</span><small>Yayın</small>
+                </button>
+              </div>
+            </details>
+
+            <details class="site-nav-group">
+              <summary class="site-nav-item">
+                <span class="nav-glyph">§</span>Yasal<span class="nav-chevron">▾</span>
+              </summary>
+              <div class="site-nav-menu">
+                <button type="button" data-url="https://warthunder.tr/p/12-hakkimizda">
+                  <span>Hakkımızda</span><small>Topluluk</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/p/3-kullanim-sartlari">
+                  <span>Kullanım Şartları</span><small>Kurallar</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/p/2-gizlilik-ilkesi">
+                  <span>Gizlilik İlkesi</span><small>Veri ve gizlilik</small>
+                </button>
+                <button type="button" data-url="https://warthunder.tr/p/4-yonergeler">
+                  <span>Yönergeler</span><small>Topluluk rehberi</small>
+                </button>
+              </div>
+            </details>
+          </div>
+        </nav>
 
         <section class="cards" aria-label="Bölümler">
           <button class="card" type="button" data-section="forum">
@@ -106,6 +245,7 @@
               <span class="section-kicker">SESLİ SOHBET</span>
               <h2>Sesli odalarda konuş</h2>
             </div>
+            <span class="status-pill">GLOBAL BAS-KONUŞ</span>
           </div>
           <div class="voice-row">
             <p>Bas-konuş tuşunu Ayarlar’dan seç. Uygulama arka planda olsa bile mikrofon çalışır.</p>
@@ -131,9 +271,16 @@
         </section>
       </main>
 
+      <div class="session-checking" id="session-checking">
+        <span class="spinner" aria-hidden="true"></span>
+        <strong>Oturum kontrol ediliyor…</strong>
+        <span id="session-status">warthunder.tr hesabın doğrulanıyor.</span>
+        <button class="btn btn-compact is-hidden" id="session-retry" type="button">Tekrar dene</button>
+      </div>
+
       <footer>
         <span>War Thunder Türkiye · warthunder.tr</span>
-        <span>v0.1.0</span>
+        <span id="app-version">v0.2.0</span>
       </footer>
     </div>
 
@@ -147,48 +294,59 @@
           <button class="icon-btn" id="settings-close" type="button" aria-label="Kapat">✕</button>
         </div>
 
-        <label class="setting-row">
-          <span>
-            <strong>Bas-konuş</strong>
-            <small>Tuşu basılı tutunca mikrofon açılır.</small>
-          </span>
-          <input type="checkbox" id="setting-ptt-enabled" />
-        </label>
+        <div class="settings-section">
+          <span class="settings-label">SES</span>
 
-        <label class="setting-row">
-          <span>
-            <strong>Bas-konuş tuşu</strong>
-            <small>Sesli odalarda kullanılacak tuş.</small>
-          </span>
-          <select id="setting-ptt-key">
-            <option value="alt">Alt</option>
-            <option value="v">V</option>
-            <option value="f">F</option>
-          </select>
-        </label>
+          <label class="setting-row">
+            <span>
+              <strong>Bas-konuş</strong>
+              <small>Tuşu basılı tutunca mikrofon açılır.</small>
+            </span>
+            <input type="checkbox" id="setting-ptt-enabled" />
+          </label>
 
-        <label class="setting-row">
-          <span>
-            <strong>2. monitörde aç</strong>
-            <small>Uygulama penceresini ikinci ekranda açar.</small>
-          </span>
-          <input type="checkbox" id="setting-second-monitor" />
-        </label>
+          <div class="setting-row setting-row-static">
+            <span>
+              <strong>Bas-konuş tuşu</strong>
+              <small>Butona tıkla, ardından istediğin tuşa bas. İptal için Vazgeç.</small>
+            </span>
+            <div class="key-capture-wrap">
+              <button class="key-capture" id="ptt-capture" type="button">Alt</button>
+              <button class="key-cancel is-hidden" id="ptt-cancel" type="button">Vazgeç</button>
+            </div>
+          </div>
+        </div>
 
-        <label class="setting-row">
-          <span>
-            <strong>Kapatınca tepsiye küçült</strong>
-            <small>Kapatma düğmesi uygulamayı sonlandırmaz.</small>
-          </span>
-          <input type="checkbox" id="setting-close-to-tray" />
-        </label>
+        <div class="settings-section">
+          <span class="settings-label">UYGULAMA</span>
+
+          <label class="setting-row">
+            <span>
+              <strong>Kapatınca tepsiye küçült</strong>
+              <small>Kapatma düğmesi uygulamayı sonlandırmaz.</small>
+            </span>
+            <input type="checkbox" id="setting-close-to-tray" />
+          </label>
+
+          <div class="setting-row setting-row-static">
+            <span>
+              <strong>Güncellemeler</strong>
+              <small id="update-status">Sürüm kontrolü yapılmadı.</small>
+            </span>
+            <button class="btn btn-compact" id="update-check" type="button">Kontrol et</button>
+          </div>
+        </div>
 
         <button class="btn btn-block" type="button" id="setting-mic">Mikrofon izin ayarlarını aç</button>
         <p class="settings-note">Mikrofon izni Windows gizlilik ayarlarından yönetilir.</p>
 
+        <p class="form-error" id="settings-error" hidden></p>
         <button class="btn btn-primary btn-block" type="button" id="settings-save">Kaydet</button>
+        <p class="settings-version">War Thunder Türkiye <span id="settings-version">v0.2.0</span></p>
       </div>
     </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
     <script src="app.js"></script>
   </body>

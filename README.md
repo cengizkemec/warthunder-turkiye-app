@@ -6,13 +6,16 @@ Bu proje **Flarum Social eklentisinden bağımsızdır**. Foruma kod, rota veya 
 
 ## Özellikler
 
-- Discord tarzı giriş / kayıt ekranı (site oturumu ve güvenlik doğrulaması korunur)
+- Login-first açılış: giriş yapılmadan Forum, Blog ve Sosyal bölümleri açılmaz
+- Site oturumu WebView2 profilinde saklanır; çıkış yapılmadığı sürece tekrar giriş istenmez
+- Discord tarzı giriş / kayıt ekranı; giriş siteye ait gerçek form ve güvenlik doğrulaması ile tamamlanır
 - Forum, blog ve sosyal bölümlerine doğrudan geçiş
+- Forum üst menüsündeki Forum, Sosyal, Discord, Destek, İndir, Araçlar, TV ve Yasal bağlantıları
 - Son 10 forum konusunu ana ekranda gösterme
-- Global **bas-konuş** (varsayılan: Alt) — uygulama arka planda olsa bile çalışır
-- Uygulama içi **Ayarlar**: bas-konuş tuşu, 2. monitör, tepsi davranışı, mikrofon izinleri
-- İkinci monitörde açılış ve “2. Monitöre Taşı” tepsi komutu
-- Sistem tepsisi, tek örnek kilidi, kapatınca tepsiye küçültme
+- Global **bas-konuş** — uygulama arka planda olsa bile çalışır
+- Uygulama içi **Ayarlar**: istenen tuşu bas-konuş olarak atama (Caps Lock, harfler, fonksiyon tuşları ve daha fazlası), bas-konuş aç/kapat, tepsi davranışı, mikrofon izinleri
+- GitHub Releases üzerinden sürüm kontrolü ve tek tıkla güncelleme indirme
+- Sistem tepsisi, tek örnek kilidi, kapatınca tepsiye küçültme, manuel “2. Monitöre Taşı”
 - WebView2 tabanlı native pencere; site oturumu, Pusher ve LiveKit aynen çalışır
 
 ## Gereksinimler
@@ -44,7 +47,7 @@ Ardından Inno Setup ile kurulum dosyasını üret:
 Çıktı:
 
 ```text
-dist-installer\WarThunderTurkiyeSetup-0.1.0.exe
+dist-installer\WarThunderTurkiyeSetup-0.2.0.exe
 ```
 
 Tauri ayrıca şurada NSIS kurulumu da üretir:
@@ -53,13 +56,39 @@ Tauri ayrıca şurada NSIS kurulumu da üretir:
 src-tauri\target\release\bundle\nsis\
 ```
 
+## Oturum köprüsü
+
+Uygulama, gizli ana pencerede `warthunder.tr` sayfasını yükler ve sayfaya küçük bir oturum okuyucu enjekte eder. Sayfa, oturum durumunu `https://warthunder.tr/__wttr_desktop/session` adresine bildirir; Rust tarafı bu yönlendirmeyi yakalar, isteği siteye göndermeden iptal eder ve dashboard'u günceller. Site içeriğinin Tauri IPC'ye erişimi yoktur.
+
+İsteğe bağlı `warthunder-desktop-bridge` eklentisi, `/api/desktop/session` yedeğini ve `warthunder.tr` üzerinden güncelleme manifestini sağlar. Uygulama bu eklenti olmadan da Flarum oturumunu okuyabilir.
+
+Bas-konuş, siteye `WTTRDesktop.setPTT` üzerinden bildirilir. Social ses ayarlarında bas-konuş açık olmalıdır; masaüstü uygulamasındaki tuş yalnızca global kısayoldur ve Social tarafındaki tuştan bağımsız çalışır.
+
+## Sorun giderme
+
+### “Oturum kontrol ediliyor” ekranında kalıyor
+
+- İnternet bağlantısını ve `https://warthunder.tr` erişimini kontrol et.
+- Norton 360, Smart App Control veya benzeri güvenlik yazılımları imzasız yeni derlemeyi ilk açılışta karantinaya alabilir. Uygulamaya izin ver, ardından **Tekrar dene** düğmesine bas.
+- Kurulumdan sonra uygulamayı bir kez normal olarak açıp siteye erişebildiğini doğrula.
+
+### Bas-konuş çalışmıyor
+
+- Social sesli oda ayarlarında bas-konuşun açık olduğundan emin ol.
+- Uygulama Ayarlar ekranından farklı bir tuş atayıp tekrar dene.
+- Mikrofon izninin Windows gizlilik ayarlarında açık olduğunu kontrol et.
+
+### Güvenlik yazılımı uygulamayı siliyor veya engelliyor
+
+İmzasız release dosyaları Norton/Smart App Control tarafından engellenebilir. Dağıtım için kod imzalama sertifikası kullanılması önerilir. Test sırasında uygulama klasörünü güvenlik yazılımının istisna listesine ekle.
+
 ## Mimari
 
 - `dist/` — yerel dashboard / giriş ekranı
-- `src-tauri/` — Rust tarafı: pencereler, tepsi, global bas-konuş, ayarlar, forum konuları API’si
+- `src-tauri/` — Rust tarafı: pencereler, tepsi, global bas-konuş, ayarlar, forum konuları API'si, oturum köprüsü ve güncelleme kontrolü
 - Site içeriği ayrı bir WebView2 penceresinde `https://warthunder.tr` üzerinden açılır
-- Yerel dashboard ile site penceresi ayrıdır; site içeriğinin Tauri IPC’ye erişimi yoktur
-- Bas-konuş, siteye sentetik klavye olayları göndererek çalışır. Social ses ayarlarında bas-konuş açık ve tuş **Alt** olmalıdır
+- Yerel dashboard ile site penceresi ayrıdır; site içeriğinin Tauri IPC'ye erişimi yoktur
+- Ayarlar `%LOCALAPPDATA%\tr.warthunder.desktop\settings.json` altında saklanır
 
 ## Yol haritası
 
