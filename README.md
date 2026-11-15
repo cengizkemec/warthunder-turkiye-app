@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/cengizkemec/warthunder-turkiye-app/releases/latest">Son Sürüm</a> ·
-  <a href="https://github.com/cengizkemec/warthunder-turkiye-app/releases/download/v0.2.3/WarThunderTurkiyeSetup-0.2.3.exe">Kurulum Dosyası</a> ·
+  <a href="https://github.com/cengizkemec/warthunder-turkiye-app/releases/download/v0.2.4/WarThunderTurkiyeSetup-0.2.4.exe">Kurulum Dosyası</a> ·
   <a href="https://warthunder.tr">warthunder.tr</a>
 </p>
 
@@ -21,7 +21,7 @@
 
 - **Uygulama deposu:** https://github.com/cengizkemec/warthunder-turkiye-app
 - **Son sürüm:** https://github.com/cengizkemec/warthunder-turkiye-app/releases/latest
-- **v0.2.3 kurulum dosyası:** https://github.com/cengizkemec/warthunder-turkiye-app/releases/download/v0.2.3/WarThunderTurkiyeSetup-0.2.3.exe
+- **v0.2.4 kurulum dosyası:** https://github.com/cengizkemec/warthunder-turkiye-app/releases/download/v0.2.4/WarThunderTurkiyeSetup-0.2.4.exe
 - **Köprü eklentisi:** özel/opsiyonel (depo gizli)
 - **Site:** https://warthunder.tr
 
@@ -184,7 +184,7 @@ npm run tauri build
 Çıktı:
 
 ```text
-dist-installer\WarThunderTurkiyeSetup-0.2.3.exe
+dist-installer\WarThunderTurkiyeSetup-0.2.4.exe
 ```
 
 Tauri ayrıca NSIS paketi üretir:

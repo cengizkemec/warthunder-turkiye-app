@@ -24,6 +24,7 @@ const state = {
     user: null,
     unreadNotifications: 0,
     notifications: [],
+    discussions: [],
   },
   settings: {
     pttKey: 'AltLeft',
@@ -309,6 +310,7 @@ const applySession = (payload) => {
     user: payload.user || null,
     unreadNotifications: Math.max(0, Number(payload.unreadNotifications) || 0),
     notifications: Array.isArray(payload.notifications) ? payload.notifications : [],
+    discussions: Array.isArray(payload.discussions) ? payload.discussions : [],
   };
 
   state.session = next;
@@ -323,7 +325,12 @@ const applySession = (payload) => {
     clearTimeout(state.sessionTimeout);
   }
 
-  if (next.authenticated && !previous.authenticated) {
+  if (next.authenticated && next.discussions.length > 0) {
+    state.topicsLoaded = true;
+    renderDiscussions(next.discussions);
+  }
+
+  if (next.authenticated && !previous.authenticated && next.discussions.length === 0) {
     state.topicsLoaded = false;
     loadDiscussions();
   }
@@ -787,15 +794,25 @@ function loadDiscussions() {
   state.topicsLoading = true;
   renderTopicsMessage('Konular yükleniyor…');
 
+  const timeout = setTimeout(() => {
+    if (state.topicsLoaded) return;
+
+    state.topicsLoading = false;
+    renderTopicsMessage('Konular yüklenemedi.', true);
+  }, 15000);
+
   invoke('get_latest_discussions')
     .then((items) => {
       state.topicsLoaded = true;
+      clearTimeout(timeout);
       renderDiscussions(items);
     })
     .catch(() => {
+      clearTimeout(timeout);
       renderTopicsMessage('Konular yüklenemedi.', true);
     })
     .finally(() => {
+      clearTimeout(timeout);
       state.topicsLoading = false;
     });
 }

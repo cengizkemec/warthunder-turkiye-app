@@ -52,6 +52,7 @@ struct SessionState {
     unread: i64,
     last_notification_id: Option<String>,
     notifications: Vec<BridgeNotificationItem>,
+    discussions: Vec<BridgeDiscussionItem>,
 }
 
 struct AppState {
@@ -75,6 +76,15 @@ struct BridgeNotification {
     id: Option<String>,
     title: Option<String>,
     body: Option<String>,
+}
+
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BridgeDiscussionItem {
+    title: String,
+    url: String,
+    replies: i64,
+    last_posted_at: Option<String>,
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -104,7 +114,9 @@ struct BridgeSession {
     #[serde(default)]
     latest_notification: Option<BridgeNotification>,
     #[serde(default)]
-    notifications: Vec<BridgeNotificationItem>,
+    notifications: Option<Vec<BridgeNotificationItem>>,
+    #[serde(default)]
+    discussions: Option<Vec<BridgeDiscussionItem>>,
     #[serde(default)]
     selftest: bool,
 }
@@ -960,9 +972,18 @@ fn session_script() -> &'static str {
     }
   };
 
+  const fetchWithTimeout = (url, options, timeout = 4000) => {
+    const request = fetch(url, options).catch(() => null);
+
+    return Promise.race([
+      request,
+      new Promise((resolve) => setTimeout(() => resolve(null), timeout))
+    ]);
+  };
+
   const fromApi = async () => {
     try {
-      const response = await fetch('/api/desktop/session', {
+      const response = await fetchWithTimeout('/api/desktop/session', {
         credentials: 'same-origin',
         headers: { Accept: 'application/json' }
       });
@@ -991,12 +1012,12 @@ fn session_script() -> &'static str {
     notificationsFetchedAt = now;
 
     try {
-      const response = await fetch('/api/desktop/notifications?limit=8', {
+      const response = await fetchWithTimeout('/api/desktop/notifications?limit=8', {
         credentials: 'same-origin',
         headers: { Accept: 'application/json' }
       });
 
-      if (response.ok) {
+      if (response && response.ok) {
         const payload = await response.json();
         const data = payload.data || {};
 
@@ -1011,12 +1032,12 @@ fn session_script() -> &'static str {
     } catch (error) {}
 
     try {
-      const response = await fetch('/api/notifications?page[limit]=8&sort=-createdAt', {
+      const response = await fetchWithTimeout('/api/notifications?page[limit]=8&sort=-createdAt', {
         credentials: 'same-origin',
         headers: { Accept: 'application/json' }
       });
 
-      if (!response.ok) {
+      if (!response || !response.ok) {
         cachedNotifications = null;
         return null;
       }
@@ -1052,34 +1073,72 @@ fn session_script() -> &'static str {
     }
   };
 
-  const report = async () => {
-    const session = fromFlarum() || await fromApi();
-    if (!session) return;
+  let cachedDiscussions = null;
+  let discussionsFetchedAt = 0;
 
-    if (session.authenticated) {
-      const notifications = await fetchNotifications();
+  const fetchDiscussions = async () => {
+    const now = Date.now();
+    if (now - discussionsFetchedAt < 15000) return cachedDiscussions;
+    discussionsFetchedAt = now;
 
-      if (notifications) {
-        session.notifications = notifications.items;
+    try {
+      const response = await fetchWithTimeout('/api/desktop/discussions?limit=10', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      });
 
-        if (notifications.authoritative && notifications.unread !== null) {
-          session.unreadNotifications = notifications.unread;
-        }
+      if (response && response.ok) {
+        const payload = await response.json();
+        const data = payload.data || {};
 
-        const latest = notifications.items.find((item) => !item.isRead);
-
-        if (latest) {
-          const fromUser = latest.fromUser && (latest.fromUser.displayName || latest.fromUser.username);
-
-          session.latestNotification = {
-            id: latest.id,
-            title: 'War Thunder Türkiye',
-            body: (latest.label || 'Yeni bildirim') + (fromUser ? ' · ' + fromUser : '')
-          };
+        if (Array.isArray(data.discussions)) {
+          cachedDiscussions = data.discussions;
+          return cachedDiscussions;
         }
       }
-    }
+    } catch (error) {}
 
+    try {
+      const response = await fetchWithTimeout('/api/discussions?sort=-lastPostedAt&page[limit]=10', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      });
+
+      if (!response || !response.ok) return cachedDiscussions;
+
+      const payload = await response.json();
+      const items = (payload.data || []).map((item) => {
+        const attributes = item.attributes || {};
+        let url = attributes.shareUrl;
+
+        if (!url && attributes.slug) {
+          url = '/d/' + attributes.slug;
+        } else if (!url && item.id) {
+          url = '/d/' + item.id;
+        }
+
+        if (url && url.startsWith('/')) {
+          url = 'https://warthunder.tr' + url;
+        }
+
+        return {
+          title: attributes.title || 'Başlıksız konu',
+          url,
+          replies: Math.max(0, (Number(attributes.commentCount) || 1) - 1),
+          lastPostedAt: attributes.lastPostedAt || null
+        };
+      }).filter((item) => Boolean(item.url));
+
+      cachedDiscussions = items;
+      return cachedDiscussions;
+    } catch (error) {
+      return cachedDiscussions;
+    }
+  };
+
+  let extrasPending = false;
+
+  const sendSession = (session) => {
     const encoded = JSON.stringify(session);
     if (encoded === last) return;
     last = encoded;
@@ -1088,6 +1147,57 @@ fn session_script() -> &'static str {
       window.location.href = '/__wttr_desktop/session?payload=' + encodeURIComponent(encoded);
     } catch (error) {
       // The app keeps its current session state if the bridge is unavailable.
+    }
+  };
+
+  const loadExtras = (session) => {
+    if (extrasPending) return;
+    extrasPending = true;
+
+    Promise.all([fetchNotifications(), fetchDiscussions()])
+      .then(([notifications, discussions]) => {
+        const enriched = { ...session };
+
+        if (notifications) {
+          enriched.notifications = notifications.items;
+
+          if (notifications.authoritative && notifications.unread !== null) {
+            enriched.unreadNotifications = notifications.unread;
+          }
+
+          const latest = notifications.items.find((item) => !item.isRead);
+
+          if (latest) {
+            const fromUser = latest.fromUser && (latest.fromUser.displayName || latest.fromUser.username);
+
+            enriched.latestNotification = {
+              id: latest.id,
+              title: 'War Thunder Türkiye',
+              body: (latest.label || 'Yeni bildirim') + (fromUser ? ' · ' + fromUser : '')
+            };
+          }
+        }
+
+        if (discussions) {
+          enriched.discussions = discussions;
+        }
+
+        sendSession(enriched);
+      })
+      .catch(() => {})
+      .finally(() => {
+        extrasPending = false;
+      });
+  };
+
+  const report = async () => {
+    const session = fromFlarum() || await fromApi();
+    if (!session) return;
+
+    sendSession(session);
+
+    if (session.authenticated) {
+      loadExtras(session);
     }
   };
 
@@ -1359,6 +1469,7 @@ fn session_json(session: &SessionState) -> serde_json::Value {
         "user": user,
         "unreadNotifications": session.unread,
         "notifications": session.notifications,
+        "discussions": session.discussions,
     })
 }
 
@@ -1409,6 +1520,8 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
             .as_ref()
             .and_then(|user| user.display_name.clone());
         let next_avatar_url = payload.user.as_ref().and_then(|user| user.avatar_url.clone());
+        let next_notifications = payload.notifications.clone();
+        let next_discussions = payload.discussions.clone();
 
         changed = !session.known
             || session.authenticated != payload.authenticated
@@ -1416,7 +1529,12 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
             || session.display_name != next_display_name
             || session.avatar_url != next_avatar_url
             || session.unread != payload.unread_notifications
-            || session.notifications != payload.notifications;
+            || next_notifications
+                .as_ref()
+                .is_some_and(|notifications| session.notifications != *notifications)
+            || next_discussions
+                .as_ref()
+                .is_some_and(|discussions| session.discussions != *discussions);
 
         session.known = true;
         session.authenticated = payload.authenticated;
@@ -1424,7 +1542,14 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
         session.display_name = next_display_name;
         session.avatar_url = next_avatar_url;
         session.unread = payload.unread_notifications;
-        session.notifications = payload.notifications.clone();
+
+        if let Some(notifications) = next_notifications {
+            session.notifications = notifications;
+        }
+
+        if let Some(discussions) = next_discussions {
+            session.discussions = discussions;
+        }
 
         if payload.authenticated {
             if let Some(notification) = payload.latest_notification.as_ref() {
