@@ -34,6 +34,7 @@ const state = {
   },
   topicsLoaded: false,
   topicsLoading: false,
+  topicsTimeout: null,
   capturing: false,
   update: null,
   sessionTimeout: null,
@@ -326,6 +327,9 @@ const applySession = (payload) => {
   }
 
   if (next.authenticated && next.discussions.length > 0) {
+    clearTimeout(state.topicsTimeout);
+    state.topicsTimeout = null;
+    state.topicsLoading = false;
     state.topicsLoaded = true;
     renderDiscussions(next.discussions);
   }
@@ -794,7 +798,8 @@ function loadDiscussions() {
   state.topicsLoading = true;
   renderTopicsMessage('Konular yükleniyor…');
 
-  const timeout = setTimeout(() => {
+  clearTimeout(state.topicsTimeout);
+  state.topicsTimeout = setTimeout(() => {
     if (state.topicsLoaded) return;
 
     state.topicsLoading = false;
@@ -804,15 +809,18 @@ function loadDiscussions() {
   invoke('get_latest_discussions')
     .then((items) => {
       state.topicsLoaded = true;
-      clearTimeout(timeout);
+      clearTimeout(state.topicsTimeout);
+      state.topicsTimeout = null;
       renderDiscussions(items);
     })
     .catch(() => {
-      clearTimeout(timeout);
+      clearTimeout(state.topicsTimeout);
+      state.topicsTimeout = null;
       renderTopicsMessage('Konular yüklenemedi.', true);
     })
     .finally(() => {
-      clearTimeout(timeout);
+      clearTimeout(state.topicsTimeout);
+      state.topicsTimeout = null;
       state.topicsLoading = false;
     });
 }

@@ -1800,8 +1800,8 @@ async fn get_latest_discussions(app: AppHandle) -> Result<Vec<DiscussionItem>, S
         .map_err(|error| error.to_string())?;
 
     let response = client
-        .get("https://warthunder.tr/api/discussions")
-        .query(&[("sort", "-lastPostedAt"), ("page[limit]", "10")])
+        .get("https://warthunder.tr/api/desktop/discussions")
+        .query(&[("limit", "10")])
         .send()
         .await
         .map_err(|error| error.to_string())?;
@@ -1813,6 +1813,7 @@ async fn get_latest_discussions(app: AppHandle) -> Result<Vec<DiscussionItem>, S
     let payload: serde_json::Value = response.json().await.map_err(|error| error.to_string())?;
     let items = payload
         .get("data")
+        .and_then(|value| value.get("discussions"))
         .and_then(|value| value.as_array())
         .cloned()
         .unwrap_or_default();
@@ -1820,23 +1821,14 @@ async fn get_latest_discussions(app: AppHandle) -> Result<Vec<DiscussionItem>, S
     let discussions = items
         .into_iter()
         .filter_map(|item| {
-            let attributes = item.get("attributes")?;
-            let title = attributes.get("title")?.as_str()?.to_string();
-            let url = attributes
-                .get("shareUrl")
-                .and_then(|value| value.as_str())
-                .map(str::to_string)
-                .or_else(|| {
-                    let id = item.get("id")?.as_str()?;
-                    let slug = attributes.get("slug")?.as_str()?;
-                    Some(format!("https://warthunder.tr/d/{id}-{slug}"))
-                })?;
-            let replies = attributes
-                .get("commentCount")
+            let title = item.get("title")?.as_str()?.to_string();
+            let url = item.get("url")?.as_str()?.to_string();
+            let replies = item
+                .get("replies")
                 .and_then(|value| value.as_i64())
-                .unwrap_or(1)
-                .saturating_sub(1);
-            let last_posted_at = attributes
+                .unwrap_or(0)
+                .max(0);
+            let last_posted_at = item
                 .get("lastPostedAt")
                 .and_then(|value| value.as_str())
                 .map(str::to_string);

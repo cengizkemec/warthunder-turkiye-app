@@ -45,8 +45,8 @@ powershell -ExecutionPolicy Bypass -File scripts\sign.ps1
 Kurulum dosyasının SHA-256’sını doğrulamak için:
 
 ```powershell
-Get-FileHash .\WarThunderTurkiyeSetup-0.2.5.exe -Algorithm SHA256
-Get-Content .\WarThunderTurkiyeSetup-0.2.5.exe.sha256
+Get-FileHash .\WarThunderTurkiyeSetup-0.2.6.exe -Algorithm SHA256
+Get-Content .\WarThunderTurkiyeSetup-0.2.6.exe.sha256
 ```
 
 ## Yanlış pozitif bildirimi
@@ -57,7 +57,7 @@ Antivirüs yazılımı uygulamayı yanlışlıkla tehdit olarak görürse aşağ
 - Üretici: Cengiz Kemec
 - Site: https://warthunder.tr
 - Kaynak kod: https://github.com/cengizkemec/warthunder-turkiye-app
-- Sürüm: v0.2.5
+- Sürüm: v0.2.6
 - Kurulum dosyası SHA-256: (release sayfasındaki `.sha256` dosyası)
 - Teknoloji: Rust + Tauri 2 + Microsoft Edge WebView2
 - Davranış:
