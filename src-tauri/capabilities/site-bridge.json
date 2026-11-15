@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "site-bridge",
+  "description": "Allow the War Thunder Türkiye site to report the Flarum session to the desktop shell",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["https://warthunder.tr/*"]
+  },
+  "permissions": ["core:default", "allow-bridge-session"]
+}

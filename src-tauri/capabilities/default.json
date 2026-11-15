@@ -3,5 +3,23 @@
   "identifier": "default",
   "description": "Default capability for the local dashboard window",
   "windows": ["dashboard"],
-  "permissions": ["core:default", "notification:default"]
+  "permissions": [
+    "core:default",
+    "notification:default",
+    "allow-check-for-updates",
+    "allow-get-latest-discussions",
+    "allow-get-session",
+    "allow-get-settings",
+    "allow-install-update",
+    "allow-logout",
+    "allow-open-auth",
+    "allow-open-external",
+    "allow-open-microphone-settings",
+    "allow-open-section",
+    "allow-open-url",
+    "allow-refresh-session",
+    "allow-request-microphone",
+    "allow-save-settings",
+    "allow-test-notification"
+  ]
 }

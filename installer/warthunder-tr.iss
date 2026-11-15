@@ -1,6 +1,6 @@
 #define MyAppName "War Thunder Türkiye"
 #define MyAppId "tr.warthunder.desktop"
-#define MyAppVersion "0.2.4"
+#define MyAppVersion "0.2.5"
 #define MyAppPublisher "Cengiz Kemec"
 #define MyAppURL "https://warthunder.tr/"
 #define MyAppExeName "warthunder-desktop.exe"
@@ -29,7 +29,7 @@ SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
 RestartApplications=no
-VersionInfoVersion=0.2.4.0
+VersionInfoVersion=0.2.5.0
 VersionInfoDescription={#MyAppName} Setup
 VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}

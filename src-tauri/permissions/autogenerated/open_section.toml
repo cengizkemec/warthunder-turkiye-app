@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-open-section"
+description = "Enables the open_section command without any pre-configured scope."
+commands.allow = ["open_section"]
+
+[[permission]]
+identifier = "deny-open-section"
+description = "Denies the open_section command without any pre-configured scope."
+commands.deny = ["open_section"]

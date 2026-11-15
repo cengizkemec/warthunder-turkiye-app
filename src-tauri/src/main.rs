@@ -1139,9 +1139,17 @@ fn session_script() -> &'static str {
   let extrasPending = false;
 
   const sendSession = (session) => {
-    const encoded = JSON.stringify(session);
+    let encoded = JSON.stringify(session);
     if (encoded === last) return;
     last = encoded;
+
+    const canInvoke = window.__TAURI_INTERNALS__
+      && typeof window.__TAURI_INTERNALS__.invoke === 'function';
+
+    if (canInvoke) {
+      window.__TAURI_INTERNALS__.invoke('bridge_session', { payload: encoded }).catch(() => {});
+      return;
+    }
 
     try {
       window.location.href = '/__wttr_desktop/session?payload=' + encodeURIComponent(encoded);
@@ -1586,16 +1594,31 @@ fn apply_session(app: &AppHandle, payload: BridgeSession) {
             *pending = false;
         }
 
-        if !was_known || !was_authenticated {
+        if was_known && !was_authenticated {
             show_dashboard(app);
         }
-    } else if snapshot.known && (!was_known || was_authenticated) {
+    } else if snapshot.known && was_known && was_authenticated {
         show_auth_main(app);
     }
 }
 
 fn is_bridge_url(url: &tauri::Url) -> bool {
     url.host_str() == Some(SITE_HOST) && url.path().starts_with(BRIDGE_PREFIX)
+}
+
+#[tauri::command]
+fn bridge_session(app: AppHandle, payload: String) {
+    match serde_json::from_str::<BridgeSession>(&payload) {
+        Ok(session) => {
+            log(&format!(
+                "bridge:ipc:{}:{:?}",
+                session.authenticated,
+                session.user.as_ref().and_then(|user| user.username.clone())
+            ));
+            apply_session(&app, session);
+        }
+        Err(error) => log(&format!("bridge:ipc-invalid:{error}")),
+    }
 }
 
 fn handle_bridge_navigation(app: &AppHandle, url: &tauri::Url) {
@@ -2541,6 +2564,7 @@ pub fn run() {
             request_microphone,
             open_microphone_settings,
             get_session,
+            bridge_session,
             test_notification,
             check_for_updates,
             install_update
