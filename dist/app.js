@@ -649,6 +649,7 @@ $('#logout-button')?.addEventListener('click', () => {
 });
 
 const notificationList = $('#notifications-list');
+const discussionList = $('#latest-discussions');
 
 function renderNotifications(items) {
   if (!notificationList) return;
