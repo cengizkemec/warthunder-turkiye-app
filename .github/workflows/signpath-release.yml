@@ -1,0 +1,217 @@
+# Signs the Windows release with SignPath Foundation.
+#
+# This workflow is manual and only works after the SignPath Foundation
+# application is approved and the repository secrets below are configured:
+#   SIGNPATH_API_TOKEN
+#   SIGNPATH_ORGANIZATION_ID
+#
+# See docs/SIGNING.md for the project, policy, and artifact configuration.
+
+name: release-signpath
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without the v prefix, e.g. 1.1.4"
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  sign:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          npm ci
+          node node_modules/electron/install.js
+
+      - name: Verify release version
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $version = $env:VERSION.Trim()
+          if ($version.StartsWith("v")) { $version = $version.Substring(1) }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Version must look like 1.1.4"
+          }
+
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($packageVersion -ne $version) {
+            throw "package.json is $packageVersion, expected $version"
+          }
+
+          $iss = Get-Content installer\wttr-app.iss -Raw
+          if ($iss -notmatch [regex]::Escape("#define MyAppVersion `"$version`"")) {
+            throw "installer\wttr-app.iss does not define MyAppVersion $version"
+          }
+
+      - name: Build push-to-talk helper
+        run: cargo build --release --manifest-path ptt-helper/Cargo.toml
+
+      - name: Package application
+        run: npx electron-builder --win dir
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Prepare application signing input
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path sign-input-app\resources | Out-Null
+          Copy-Item dist\win-unpacked\wttr-app.exe sign-input-app\wttr-app.exe
+          Copy-Item dist\win-unpacked\resources\ptt-helper.exe sign-input-app\resources\ptt-helper.exe
+          Compress-Archive -Path sign-input-app\* -DestinationPath unsigned-app.zip -Force
+
+      - name: Upload unsigned application
+        id: upload-app
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-app
+          path: unsigned-app.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Sign application
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: wttr-app
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: wttr-app-app
+          github-artifact-id: ${{ steps.upload-app.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed-app
+          skip-decompress: true
+          parameters: |
+            version: "${{ inputs.version }}.0"
+
+      - name: Restore signed application files
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem signed-app -Filter *.zip | Select-Object -First 1
+          if (-not $zip) { throw "Signed application ZIP not found" }
+          Expand-Archive $zip.FullName -DestinationPath signed-app-extracted -Force
+          Copy-Item signed-app-extracted\wttr-app.exe dist\win-unpacked\wttr-app.exe -Force
+          Copy-Item signed-app-extracted\resources\ptt-helper.exe dist\win-unpacked\resources\ptt-helper.exe -Force
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe",
+            "C:\Program Files (x86)\Inno Setup 7\ISCC.exe",
+            "C:\Program Files\Inno Setup 7\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+          if (-not $iscc) {
+            choco install innosetup --yes --no-progress
+            $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+
+          if (-not $iscc) { throw "ISCC.exe not found" }
+
+          & $iscc "/DSourceDir=..\dist\win-unpacked" "installer\wttr-app.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Prepare installer signing input
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $installer = "dist-installer\wttr-app-Setup-$($env:VERSION).exe"
+          if (-not (Test-Path $installer)) { throw "Installer not found: $installer" }
+          Compress-Archive -Path $installer -DestinationPath unsigned-installer.zip -Force
+
+      - name: Upload unsigned installer
+        id: upload-installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: unsigned-installer.zip
+          archive: false
+          if-no-files-found: error
+
+      - name: Sign installer
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: wttr-app
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: wttr-app-installer
+          github-artifact-id: ${{ steps.upload-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed-installer
+          skip-decompress: true
+          parameters: |
+            version: "${{ inputs.version }}.0"
+
+      - name: Collect signed installer
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $zip = Get-ChildItem signed-installer -Filter *.zip | Select-Object -First 1
+          if (-not $zip) { throw "Signed installer ZIP not found" }
+          Expand-Archive $zip.FullName -DestinationPath signed-installer-extracted -Force
+          $signed = Get-ChildItem signed-installer-extracted -Filter "wttr-app-Setup-*.exe" |
+            Select-Object -First 1
+          if (-not $signed) { throw "Signed installer not found in the artifact" }
+          Copy-Item $signed.FullName "dist-installer\wttr-app-Setup-$($env:VERSION).exe" -Force
+
+      - name: Verify signatures
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $files = @(
+            "dist\win-unpacked\wttr-app.exe",
+            "dist\win-unpacked\resources\ptt-helper.exe",
+            "dist-installer\wttr-app-Setup-$($env:VERSION).exe"
+          )
+
+          foreach ($file in $files) {
+            $sig = Get-AuthenticodeSignature $file
+            Write-Host "$file -> $($sig.Status) / $($sig.SignerCertificate.Subject)"
+            if ($sig.Status -ne "Valid") {
+              throw "Signature is not valid: $file"
+            }
+          }
+
+      - name: Write SHA-256
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $file = "dist-installer\wttr-app-Setup-$($env:VERSION).exe"
+          $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+          "$hash  $(Split-Path $file -Leaf)" | Set-Content -Encoding ASCII "$file.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wttr-app-signed
+          path: |
+            dist-installer/wttr-app-Setup-*.exe
+            dist-installer/wttr-app-Setup-*.exe.sha256
+          if-no-files-found: error

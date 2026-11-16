@@ -165,11 +165,11 @@ Ardından `warthunder-desktop-bridge` içindeki `desktopApp` alanını yeni sür
 - Privacy policy: [docs/PRIVACY.md](docs/PRIVACY.md)
 - Signing process and release checklist: [docs/SIGNING.md](docs/SIGNING.md)
 
-The project is applying to the SignPath Foundation program. After approval, every
-release is built by GitHub Actions from this repository, manually approved in
-SignPath, and signed by SignPath Foundation. The signed files are `wttr-app.exe`,
-`resources/ptt-helper.exe`, and the Inno Setup installer
-`wttr-app-Setup-<version>.exe`.
+The project applied to the SignPath Foundation program on 16 November 2026.
+After approval, every release is built by GitHub Actions from this repository,
+manually approved in SignPath, and signed by SignPath Foundation. The signed
+files are `wttr-app.exe`, `resources/ptt-helper.exe`, and the Inno Setup
+installer `wttr-app-Setup-<version>.exe`.
 
 Until the application is approved, release files are unsigned and Windows
 SmartScreen may show an “Unknown publisher” warning. The SHA-256 of each installer

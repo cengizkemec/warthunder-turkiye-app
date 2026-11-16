@@ -13,9 +13,10 @@ release.
 - Signing targets: `wttr-app.exe`, `resources/ptt-helper.exe`,
   `wttr-app-Setup-<version>.exe`
 
-> Status: application prepared. Until SignPath approves the project, release
-> files remain unsigned. Do not claim that a release is signed before
-> `Get-AuthenticodeSignature` reports `Valid`.
+> Status: application submitted on 16 November 2026; awaiting SignPath review.
+> Until SignPath approves the project, release files remain unsigned. Do not
+> claim that a release is signed before `Get-AuthenticodeSignature` reports
+> `Valid`.
 
 ## 1. Eligibility checklist
 
@@ -31,6 +32,7 @@ SignPath Foundation requires:
 - [x] Code signing policy on the project homepage (README section).
 - [x] Privacy policy ([PRIVACY.md](PRIVACY.md)).
 - [x] Uninstaller (Inno Setup).
+- [x] SignPath Foundation application submitted (16 November 2026).
 - [ ] SignPath Foundation application approved.
 - [ ] SignPath project, artifact configurations, and signing policy created.
 - [ ] SignPath GitHub App installed and trusted build system linked.
@@ -199,6 +201,12 @@ Configuration:
 ```
 
 ## 5. GitHub Actions signing workflow
+
+> The ready-to-run workflow is
+> [`.github/workflows/signpath-release.yml`](../.github/workflows/signpath-release.yml).
+> It performs the two-stage signing flow below, checks that the requested
+> version matches `package.json` and the Inno Setup script, and uploads the
+> signed installer. The snippet here documents the same flow for review.
 
 The build must run on GitHub-hosted runners and the unsigned artifact must be
 uploaded with `actions/upload-artifact` before the signing request. The SignPath
