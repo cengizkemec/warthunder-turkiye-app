@@ -1,0 +1,46 @@
+appId: tr.warthunder.desktop
+productName: wttr-app
+executableName: wttr-app
+copyright: Copyright © 2026 Cengiz Kemec
+directories:
+  output: dist
+  buildResources: build
+files:
+  - src/**/*
+  - assets/**/*
+  - package.json
+extraResources:
+  - from: ptt-helper/target/release/wttr-ptt-helper.exe
+    to: ptt-helper.exe
+  - from: src/main/ptt-worker.js
+    to: ptt-worker.js
+  - from: assets/icon.png
+    to: icon.png
+  - from: assets/tray.png
+    to: tray.png
+  - from: assets/auth-bg.webp
+    to: auth-bg.webp
+asar: true
+compression: normal
+npmRebuild: false
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: wttr-app-Setup-${version}.${ext}
+  legalTrademarks: War Thunder Türkiye
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: wttr-app
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true

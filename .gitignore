@@ -1,7 +1,5 @@
 node_modules/
-src-tauri/target/
-src-tauri/gen/
-dist-installer/
+dist/
+dist-release/
+ptt-helper/target/
 *.log
-.DS_Store
-Thumbs.db

@@ -1,15 +1,26 @@
 {
-  "name": "warthunder-desktop",
+  "name": "wttr-app",
+  "version": "1.0.1",
+  "description": "War Thunder Türkiye masaüstü uygulaması",
+  "main": "src/main/index.js",
+  "author": "Cengiz Kemec",
+  "license": "MIT",
   "private": true,
-  "version": "0.2.7",
-  "description": "War Thunder Türkiye desktop app",
   "scripts": {
-    "tauri": "tauri",
-    "dev": "tauri dev",
-    "build": "tauri build",
-    "icon": "tauri icon"
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "smoke": "electron . --smoke-test",
+    "build:helper": "cargo build --release --manifest-path ptt-helper/Cargo.toml",
+    "gen:keymap": "node scripts/gen-keymap.js",
+    "dist": "npm run build:helper && electron-builder --win nsis",
+    "pack": "npm run build:helper && electron-builder --win dir"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "electron": "^45.3.3",
+    "electron-builder": "^26.18.0"
+  },
+  "allowScripts": {
+    "electron@45.3.3": true,
+    "electron-winstaller@5.4.0": true
   }
 }

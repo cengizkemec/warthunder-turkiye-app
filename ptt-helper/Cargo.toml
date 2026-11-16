@@ -1,0 +1,13 @@
+[package]
+name = "wttr-ptt-helper"
+version = "1.0.0"
+edition = "2021"
+description = "wttr-app global push-to-talk helper"
+license = "MIT"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
