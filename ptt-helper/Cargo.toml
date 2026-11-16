@@ -5,6 +5,9 @@ edition = "2021"
 description = "wttr-app global push-to-talk helper"
 license = "MIT"
 
+[build-dependencies]
+winres = "0.1"
+
 [profile.release]
 opt-level = "z"
 lto = true

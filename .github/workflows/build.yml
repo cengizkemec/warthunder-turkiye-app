@@ -6,6 +6,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: windows-latest
@@ -27,16 +30,41 @@ jobs:
       - name: Build push-to-talk helper
         run: cargo build --release --manifest-path ptt-helper/Cargo.toml
 
-      - name: Build installer
-        run: npx electron-builder --win nsis
+      - name: Package application
+        run: npx electron-builder --win dir
         env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe",
+            "C:\Program Files (x86)\Inno Setup 7\ISCC.exe",
+            "C:\Program Files\Inno Setup 7\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+          if (-not $iscc) {
+            choco install innosetup --yes --no-progress
+            $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+
+          if (-not $iscc) {
+            throw "ISCC.exe not found"
+          }
+
+          & $iscc "/DSourceDir=..\dist\win-unpacked" "installer\wttr-app.iss"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
 
       - name: Write installer SHA-256
         shell: pwsh
         run: |
-          Get-ChildItem dist -Filter "wttr-app-Setup-*.exe" | ForEach-Object {
+          Get-ChildItem dist-installer -Filter "wttr-app-Setup-*.exe" | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($_.Name)" | Set-Content -Encoding ASCII "$($_.FullName).sha256"
           }
@@ -45,5 +73,6 @@ jobs:
         with:
           name: wttr-app-installer
           path: |
-            dist/*.exe
-            dist/*.sha256
+            dist-installer/*.exe
+            dist-installer/*.sha256
+          if-no-files-found: error

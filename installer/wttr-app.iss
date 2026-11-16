@@ -35,8 +35,8 @@ RestartApplications=no
 SetupLogging=yes
 VersionInfoVersion={#MyAppVersion}.0
 VersionInfoDescription={#MyAppName} Setup
-VersionInfoProductName={#MyAppName}
-VersionInfoProductVersion={#MyAppVersion}
+VersionInfoProductName=wttr-app
+VersionInfoProductVersion={#MyAppVersion}.0
 VersionInfoCompany={#MyAppPublisher}
 
 [Languages]

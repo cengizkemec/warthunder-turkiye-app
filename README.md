@@ -27,8 +27,9 @@ Kurulan çalıştırılabilir dosya **`wttr-app.exe`** olarak üretilir.
 - **Desktop Bridge:** `https://warthunder.tr/api/desktop/*` üzerinden oturum,
   bildirimler ve son konular alınır.
 - **Windows bildirimleri:** Yeni Flarum bildirimleri masaüstü bildirimi olarak gösterilir.
-- **GitHub üzerinden otomatik güncelleme:** Açılışta GitHub Releases denetlenir, yeni
-  sürüm arka planda indirilir; "Yeniden başlat ve güncelle" ile kurulur.
+- **GitHub üzerinden otomatik güncelleme:** Açılışta GitHub Releases ve site manifesti
+  denetlenir, yeni sürüm arka planda indirilir ve uygulamadan çıkınca otomatik kurulur.
+  Hemen kurmak için dock panelindeki "Yeniden başlat ve güncelle" kullanılabilir.
 - **Görev Yöneticisi:** Paketlenmiş sürüm `wttr-app.exe` olarak çalışır; uygulama ikonu
   ve sürüm bilgisi exe'ye gömülüdür.
 
@@ -68,16 +69,20 @@ Inno Setup çıktısı:
 
 ```text
 dist-installer\wttr-app-Setup-<sürüm>.exe
+dist-installer\wttr-app-Setup-<sürüm>.exe.sha256
 ```
 
 Kurulum kullanıcı bazlıdır (admin gerekmez), `{localappdata}\Programs\wttr`
 klasörüne kurulur ve masaüstüne **`WTTR`** adlı kısayolu, Başlat menüsüne
 `WTTR` grubunu ekler.
 
+İmzalı yayın üretimi ve SignPath Foundation ayarları için
+[`docs/SIGNING.md`](docs/SIGNING.md) dosyasına bakın.
+
 Alternatif olarak electron-builder NSIS paketi de üretilebilir:
 
 ```powershell
-npm run dist   # NSIS (opsiyonel)
+npm run dist   # NSIS (opsiyonel, birincil dağıtım Inno Setup)
 ```
 
 ## Bas-konuş
@@ -130,13 +135,20 @@ destekler. Kurulumdan önce "Yeniden başlat ve güncelle" düğmesi gösterilir
 Yeni sürüm yayınlamak için:
 
 ```powershell
-# package.json sürümünü artır
+# package.json ve installer\wttr-app.iss sürümünü artır
 npm version 1.0.1 --no-git-tag-version
-npm run dist
+
+# Uygulamayı paketle ve Inno Setup kurulumunu üret
+npm run pack
+& "C:\Program Files\Inno Setup 7\ISCC.exe" installer\wttr-app.iss
+
+# SHA-256 dosyasını yaz
+$file = "dist-installer\wttr-app-Setup-1.0.1.exe"
+$hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+"$hash  $(Split-Path $file -Leaf)" | Set-Content -Encoding ASCII "$file.sha256"
 
 # GitHub release oluştur (gh CLI ile)
-gh release create v1.0.1 dist\wttr-app-Setup-1.0.1.exe `
-  dist\wttr-app-Setup-1.0.1.exe.sha256 `
+gh release create v1.0.1 $file "$file.sha256" `
   --repo cengizkemec/warthunder-turkiye-app `
   --title "wttr-app 1.0.1" --notes "Değişiklikler..." --latest
 ```
@@ -144,30 +156,57 @@ gh release create v1.0.1 dist\wttr-app-Setup-1.0.1.exe `
 Ardından `warthunder-desktop-bridge` içindeki `desktopApp` alanını yeni sürüm,
 `installerUrl` ve `sha256` ile güncelleyin; eklentiyi sunucuda yeniden yükleyin.
 
-## Antivirüs ve kod imzalama
+## Code signing policy
 
-Bu projede obfuscation, UPX veya eksik imzalı otomatik çalıştırma yoktur. Ancak
-**imzasız** yeni bir NSIS kurulum dosyası SmartScreen, Norton veya Defender tarafından
-uyarıyla karşılanabilir. Bunu tamamen garantilemek mümkün değildir; dağıtım için
-OV/EV kod imzalama sertifikası gerekir.
+**Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).**
 
-electron-builder imzalamayı ortam değişkenlerinden okur:
+- Committers and reviewers: [@cengizkemec](https://github.com/cengizkemec)
+- Approvers: [@cengizkemec](https://github.com/cengizkemec)
+- Privacy policy: [docs/PRIVACY.md](docs/PRIVACY.md)
+- Signing process and release checklist: [docs/SIGNING.md](docs/SIGNING.md)
+
+The project is applying to the SignPath Foundation program. After approval, every
+release is built by GitHub Actions from this repository, manually approved in
+SignPath, and signed by SignPath Foundation. The signed files are `wttr-app.exe`,
+`resources/ptt-helper.exe`, and the Inno Setup installer
+`wttr-app-Setup-<version>.exe`.
+
+Until the application is approved, release files are unsigned and Windows
+SmartScreen may show an “Unknown publisher” warning. The SHA-256 of each installer
+is published with the release and in the site manifest so users can verify the
+download.
+
+### Yerel test / topluluk imzası
+
+Kendi sertifikanızla yerel test yapmak için:
 
 ```powershell
-$env:CSC_LINK = "C:\path\to\certificate.pfx"
-$env:CSC_KEY_PASSWORD = "pfx-password"
-npm run dist
+powershell -ExecutionPolicy Bypass -File scripts\create-selfsigned-cert.ps1
+powershell -ExecutionPolicy Bypass -File scripts\sign-windows.ps1 `
+  -PfxPath dist-signing\wttr-selfsigned.pfx `
+  -PfxPassword "<sifre>"
 ```
 
-`ptt-helper.exe` ayrı bir çalıştırılabilir olduğu için aynı sertifikayla imzalanmalıdır:
+Self-signed sertifika yalnızca test ve topluluk içi dağıtım içindir. Kullanıcı
+`.cer` dosyasını güvenilen kök/yayıncı deposuna eklemedikçe SmartScreen uyarısı
+devam eder.
+
+### Antivirüs yanlış pozitifleri
+
+İmza süreci tamamlanana kadar Defender/Norton yeni exe dosyalarını karantinaya
+alabilir. Kalıcı çözüm imzalı yayındır. Geçici olarak:
+
+- SmartScreen: **Daha fazla bilgi → Yine de çalıştır**
+- Defender istisnası (yönetici PowerShell):
 
 ```powershell
-signtool sign /f certificate.pfx /p password /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `
-  ptt-helper\target\release\wttr-ptt-helper.exe
+Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\Programs\wttr"
 ```
 
-Kurulum sonrası Defender/SmartScreen istisnası gerekirse uygulama klasörünü ve
-`wttr-app.exe` dosyasını güvenilir listeye ekleyin.
+- Norton: `%LOCALAPPDATA%\Programs\wttr` klasörünü istisnalara ekleyin.
+
+Yanlış pozitif bildirimi için `docs/SIGNING.md` içindeki Microsoft/Norton
+bağlantılarını kullanın. Antivirüsü tüm sistemde kapatmayın.
 
 ## Sunucu tarafı
 
@@ -189,10 +228,13 @@ erişilemezse temel oturum algılama çalışmaya devam eder.
 src/main/        Electron ana süreç: pencere, IPC, tray, güncelleme, PTT
 src/preload/     contextBridge API
 src/renderer/    site.js (Flarum köprüsü), dock.js/css, offline.html
+src/screen-picker/ Ekran/pencere seçici arayüzü
 src/shared/      PTT tuş haritası
 ptt-helper/      Rust global bas-konuş yardımcısı
+installer/       Inno Setup kurulum betiği
+docs/            Kod imzalama ve gizlilik politikası
 assets/          ikon, tray ikonu, giriş arka planı
-scripts/         tuş haritası üretici, yardımcı derleme
+scripts/         tuş haritası üretici, yardımcı derleme, imzalama
 ```
 
 ## Bilinen notlar
