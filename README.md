@@ -162,6 +162,7 @@ Ardından `warthunder-desktop-bridge` içindeki `desktopApp` alanını yeni sür
 
 - Committers and reviewers: [@cengizkemec](https://github.com/cengizkemec)
 - Approvers: [@cengizkemec](https://github.com/cengizkemec)
+- Site policy page: <https://warthunder.tr/p/20-kod-imzalama-politikasi>
 - Privacy policy: [docs/PRIVACY.md](docs/PRIVACY.md)
 - Signing process and release checklist: [docs/SIGNING.md](docs/SIGNING.md)
 

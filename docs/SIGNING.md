@@ -30,6 +30,8 @@ SignPath Foundation requires:
 - [x] Active maintenance.
 - [x] GitHub Actions build on GitHub-hosted runners.
 - [x] Code signing policy on the project homepage (README section).
+- [x] Code signing policy page on warthunder.tr:
+  <https://warthunder.tr/p/20-kod-imzalama-politikasi>.
 - [x] Privacy policy ([PRIVACY.md](PRIVACY.md)).
 - [x] Uninstaller (Inno Setup).
 - [x] SignPath Foundation application submitted (16 November 2026).
@@ -52,7 +54,7 @@ with the maintainer's address.
 | --- | --- |
 | Project Name | `wttr-app` |
 | Repository URL | `https://github.com/cengizkemec/warthunder-turkiye-app` |
-| Homepage URL | `https://warthunder.tr` |
+| Homepage URL | `https://warthunder.tr` (footer links to the code signing policy page) |
 | Download URL | `https://github.com/cengizkemec/warthunder-turkiye-app/releases/latest` |
 | Privacy Policy URL | `https://github.com/cengizkemec/warthunder-turkiye-app/blob/main/docs/PRIVACY.md` |
 | Wikipedia URL | empty |
