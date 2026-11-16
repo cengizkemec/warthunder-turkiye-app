@@ -33,6 +33,7 @@ const {
   openRelease,
 } = require('./updates');
 const { createTray, updateTray, destroyTray } = require('./tray');
+const overlay = require('./overlay');
 const { tryBindingFor } = require('../shared/keymap');
 
 const APP_ID = 'tr.warthunder.desktop';
@@ -101,6 +102,66 @@ function sendToDock(channel, payload) {
   const window = getMainWindow();
   if (!window || window.isDestroyed()) return;
   window.webContents.send(channel, payload);
+}
+
+function handleOverlayAction(action) {
+  const window = getMainWindow();
+  const state = overlay.getVoiceState();
+
+  if (!window || window.isDestroyed()) return;
+
+  if (action === 'toggle-mic' || action === 'toggle-deafen' || action === 'leave') {
+    window.webContents
+      .executeJavaScript(
+        `window.__wttrDesktopVoiceAction ? window.__wttrDesktopVoiceAction(${JSON.stringify(
+          action
+        )}) : false`,
+        true
+      )
+      .catch((error) => log('overlay:voice-action-error', action, error));
+    return;
+  }
+
+  if (action === 'show-main') {
+    showWindow();
+    return;
+  }
+
+  if (action === 'open-room') {
+    showWindow();
+
+    if (state?.room?.url) {
+      try {
+        navigate(new URL(state.room.url, 'https://warthunder.tr').toString());
+      } catch (error) {
+        log('overlay:open-room-error', error);
+      }
+    }
+
+    return;
+  }
+
+  if (action === 'open-settings') {
+    showWindow();
+    sendDockCommand('open-settings');
+    return;
+  }
+
+  if (action === 'hide-overlay') {
+    overlay.setEnabled(false);
+    const publicValue = settingsStore.publicSettings();
+    sendToDock('settings:changed', publicValue);
+    updateTray(publicValue, publicSession());
+  }
+}
+
+function toggleOverlay() {
+  const settings = settingsStore.get();
+  overlay.setEnabled(!settings.overlayEnabled);
+
+  const publicValue = settingsStore.publicSettings();
+  sendToDock('settings:changed', publicValue);
+  updateTray(publicValue, publicSession());
 }
 
 function syncVoiceSettings() {
@@ -246,6 +307,7 @@ function sendPtt(active, binding) {
   };
 
   sendToDock('ptt:state', payload);
+  overlay.updatePtt(payload);
 
   window.webContents
     .executeJavaScript(
@@ -282,6 +344,16 @@ function handleSessionReport(payload) {
 
   const publicValue = publicSession();
   sendToDock('session:changed', publicValue);
+
+  if (!authenticated) {
+    overlay.updateVoiceState({
+      connected: false,
+      connecting: false,
+      connectionState: 'disconnected',
+      participants: [],
+    });
+  }
+
   updateTray(settingsStore.publicSettings(), publicValue);
 
   if (authenticated && !previous.authenticated) {
@@ -336,6 +408,7 @@ function setupIpc() {
     }
 
     sendToDock('settings:changed', publicValue);
+    overlay.updateSettings(publicValue);
     updateTray(publicValue, publicSession());
     syncVoiceSettings();
 
@@ -355,6 +428,10 @@ function setupIpc() {
 
   ipcMain.on('session:report', (_event, payload) => {
     handleSessionReport(payload);
+  });
+
+  ipcMain.on('voice:report', (_event, payload) => {
+    overlay.updateVoiceState(payload);
   });
 
   ipcMain.on('notifications:report', (_event, payload) => {
@@ -697,6 +774,9 @@ async function bootstrap() {
   attachWindowEvents();
   log('bootstrap:window-events');
 
+  overlay.create({ actionHandler: handleOverlayAction });
+  log('bootstrap:overlay-created');
+
   const settings = settingsStore.publicSettings();
 
   if (process.env.WTTR_NO_PTT === '1') {
@@ -706,7 +786,11 @@ async function bootstrap() {
     log('bootstrap:ptt-started');
   }
 
-  createTray({ settings, session: publicSession() });
+  createTray({
+    settings,
+    session: publicSession(),
+    onToggleOverlay: toggleOverlay,
+  });
   log('bootstrap:tray-created');
 
   if (!IS_SMOKE_TEST) {
@@ -775,6 +859,7 @@ if (!gotLock) {
     }
 
     ptt.stop();
+    overlay.destroy();
     destroyTray();
     log('app:quit');
 

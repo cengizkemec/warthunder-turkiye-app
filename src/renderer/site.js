@@ -370,6 +370,18 @@
       text-align: center;
     }
 
+    body.wttr-auth-mode .Modal-content .wttr-auth-retry {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: #d8b56a;
+      font: inherit;
+      font-weight: 800;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+    }
+
     @media (max-width: 980px) {
       #wttr-auth-hero,
       #wttr-auth-glow {
@@ -468,7 +480,21 @@
     if (body && !body.querySelector('.wttr-auth-hint')) {
       const hint = document.createElement('p');
       hint.className = 'wttr-auth-hint';
-      hint.textContent = 'Beni hatırla işaretliyse uygulama yeniden açıldığında giriş istemez.';
+      hint.append('Beni hatırla işaretliyse uygulama yeniden açıldığında giriş istemez. ');
+
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'wttr-auth-retry';
+      retry.textContent = 'Doğrulamayı yenile';
+      retry.addEventListener('click', () => {
+        try {
+          location.reload();
+        } catch {
+          // Ignore.
+        }
+      });
+
+      hint.appendChild(retry);
       body.insertBefore(hint, body.firstChild);
     }
 
@@ -669,6 +695,123 @@
 
   window.__wttrDesktopSyncVoiceSettings = syncVoiceSettings;
 
+  const getVoiceSession = () => {
+    try {
+      const module = window.flarum?.reg?.get?.(
+        'cengizkemec-social',
+        'forum/voiceSession'
+      );
+
+      return module?.A || module?.default || module || null;
+    } catch {
+      return null;
+    }
+  };
+
+  let lastVoiceSnapshot = '';
+
+  const reportVoiceState = () => {
+    if (window.__wttrVoicePaused) return;
+
+    const api = window.wttrDesktop;
+    if (!api || typeof api.reportVoiceState !== 'function') return;
+
+    const session = getVoiceSession();
+    let payload;
+
+    if (!session) {
+      payload = {
+        connected: false,
+        connecting: false,
+        connectionState: 'disconnected',
+        microphone: false,
+        deafened: false,
+        pttActive: false,
+        screenSharing: false,
+        latencyMs: null,
+        room: null,
+        participants: [],
+      };
+    } else {
+      const roomInfo = session.roomInfo || {};
+      const room =
+        session.connected || session.connecting
+          ? {
+              id: roomInfo.id ?? null,
+              name: roomInfo.name || roomInfo.title || roomInfo.slug || 'Sesli Oda',
+              slug: roomInfo.slug || null,
+              url: roomInfo.slug
+                ? `/social/rooms/${roomInfo.slug}?voice=1`
+                : roomInfo.id
+                  ? `/social/rooms/${roomInfo.id}?voice=1`
+                  : null,
+            }
+          : null;
+
+      const participants = Array.isArray(session.participants)
+        ? session.participants.slice(0, 12).map((participant) => ({
+            identity: String(participant?.identity || ''),
+            name: String(
+              participant?.name || participant?.username || 'Kullanıcı'
+            ),
+            username: participant?.username || null,
+            avatarUrl: participant?.avatarUrl || null,
+            local: Boolean(participant?.local),
+            speaking: Boolean(participant?.speaking),
+            muted: Boolean(participant?.muted),
+            connectionQuality: participant?.connectionQuality || null,
+          }))
+        : [];
+
+      payload = {
+        connected: Boolean(session.connected),
+        connecting: Boolean(session.connecting),
+        connectionState: session.connectionState || 'disconnected',
+        microphone: Boolean(session.microphone),
+        deafened: Boolean(session.deafened),
+        pttActive: Boolean(session.pttActive),
+        screenSharing: Boolean(session.screenSharing),
+        latencyMs: Number.isFinite(Number(session.latencyMs))
+          ? Number(session.latencyMs)
+          : null,
+        room,
+        participants,
+      };
+    }
+
+    const encoded = JSON.stringify(payload);
+    if (encoded === lastVoiceSnapshot) return;
+    lastVoiceSnapshot = encoded;
+
+    try {
+      api.reportVoiceState(payload);
+    } catch {
+      // The overlay is optional.
+    }
+  };
+
+  window.__wttrDesktopVoiceAction = async (action) => {
+    const session = getVoiceSession();
+    if (!session) return false;
+
+    if (action === 'toggle-mic') {
+      await session.toggleMic?.();
+      return true;
+    }
+
+    if (action === 'toggle-deafen') {
+      session.toggleDeafen?.();
+      return true;
+    }
+
+    if (action === 'leave') {
+      await session.disconnect?.();
+      return true;
+    }
+
+    return false;
+  };
+
   const dispatchPtt = (payload) => {
     const active = Boolean(payload?.active);
     const appKey = payload?.code || 'AltLeft';
@@ -801,10 +944,12 @@
     reportSession();
     refreshSitePttKey();
     syncAuthState();
+    reportVoiceState();
 
     setInterval(reportSession, 2500);
     setInterval(refreshSitePttKey, 30000);
     setInterval(syncAuthState, 800);
+    setInterval(reportVoiceState, 600);
 
     setTimeout(() => {
       pollNotifications();

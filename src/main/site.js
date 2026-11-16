@@ -95,7 +95,7 @@ function isSiteUrl(value) {
 }
 
 function configureSession(ses) {
-  const allowed = new Set([
+  const sitePermissions = new Set([
     'media',
     'notifications',
     'clipboard-read',
@@ -103,19 +103,44 @@ function configureSession(ses) {
     'fullscreen',
     'display-capture',
     'pointerLock',
+    'storage-access',
+    'top-level-storage-access',
   ]);
+
+  // Turnstile runs in a challenges.cloudflare.com iframe. It needs storage
+  // access for a reliable challenge; denying every permission there makes the
+  // widget fail with "verifying you are human" errors.
+  const challengePermissions = new Set([
+    'storage-access',
+    'top-level-storage-access',
+    'clipboard-sanitized-write',
+  ]);
+  const challengeOrigin = 'https://challenges.cloudflare.com';
 
   ses.setPermissionRequestHandler((_webContents, permission, callback, details) => {
     try {
       const origin = new URL(details.requestingUrl || '').origin;
-      callback(origin === SITE_ORIGIN && allowed.has(permission));
+      const permitted =
+        (origin === SITE_ORIGIN && sitePermissions.has(permission)) ||
+        (origin === challengeOrigin && challengePermissions.has(permission));
+
+      if (!permitted) {
+        log('permission:denied', permission, origin);
+      }
+
+      callback(permitted);
     } catch {
       callback(false);
     }
   });
 
   ses.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
-    return requestingOrigin === SITE_ORIGIN && allowed.has(permission);
+    const origin = String(requestingOrigin || '');
+
+    return (
+      (origin === SITE_ORIGIN && sitePermissions.has(permission)) ||
+      (origin === challengeOrigin && challengePermissions.has(permission))
+    );
   });
 
   try {
@@ -299,8 +324,31 @@ function createMainWindow() {
       }
 
       if (parsed.protocol === 'https:' && isAuthHost(parsed.hostname)) {
-        mainWindow.loadURL(parsed.toString()).catch((error) => log('auth-open:error', error));
-        return { action: 'deny' };
+        // Keep OAuth and Turnstile inside a popup that shares the same
+        // persistent session. Replacing the login page in the main window
+        // breaks providers that rely on window.opener/postMessage.
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            parent: mainWindow,
+            modal: false,
+            width: parsed.hostname === 'challenges.cloudflare.com' ? 500 : 520,
+            height: parsed.hostname === 'challenges.cloudflare.com' ? 650 : 720,
+            minWidth: 400,
+            minHeight: 500,
+            autoHideMenuBar: true,
+            title:
+              parsed.hostname === 'challenges.cloudflare.com'
+                ? 'Doğrulama'
+                : 'Giriş',
+            webPreferences: {
+              partition: PARTITION,
+              contextIsolation: true,
+              nodeIntegration: false,
+              sandbox: true,
+            },
+          },
+        };
       }
 
       if (['https:', 'http:', 'mailto:', 'tel:'].includes(parsed.protocol)) {

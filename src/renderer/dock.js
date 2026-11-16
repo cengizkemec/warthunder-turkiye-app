@@ -348,6 +348,7 @@
     const notifications = $('#wttr-notifications');
     const closeToTray = $('#wttr-close-to-tray');
     const autoUpdate = $('#wttr-auto-update');
+    const overlayEnabled = $('#wttr-overlay-enabled');
     const keyButton = $('#wttr-ptt-key');
     const version = $('#wttr-version');
 
@@ -355,6 +356,7 @@
     if (notifications) notifications.checked = settings.notificationsEnabled !== false;
     if (closeToTray) closeToTray.checked = settings.closeToTray !== false;
     if (autoUpdate) autoUpdate.checked = settings.autoUpdate !== false;
+    if (overlayEnabled) overlayEnabled.checked = settings.overlayEnabled !== false;
     if (keyButton && !capturing) keyButton.textContent = settings.pttKeyLabel || 'Alt';
     if (version) version.textContent = `v${settings.version || '1.0.0'}`;
 
@@ -498,6 +500,16 @@
     $('#wttr-auto-update')?.addEventListener('change', (event) => {
       api()
         ?.saveSettings({ autoUpdate: Boolean(event.target.checked) })
+        .then((next) => {
+          settings = next;
+          renderSettings();
+        })
+        .catch(() => showToast('Ayar kaydedilemedi.', 'error'));
+    });
+
+    $('#wttr-overlay-enabled')?.addEventListener('change', (event) => {
+      api()
+        ?.saveSettings({ overlayEnabled: Boolean(event.target.checked) })
         .then((next) => {
           settings = next;
           renderSettings();
@@ -697,6 +709,16 @@
                 <small class="wttr-row-note">Butona tıkla, ardından istediğin tuşa bas.</small>
               </div>
               <button class="wttr-key-button" id="wttr-ptt-key" type="button">Alt</button>
+            </div>
+            <div class="wttr-row">
+              <div class="wttr-row-copy">
+                <strong class="wttr-row-title">Sesli oda overlay’i</strong>
+                <small class="wttr-row-note">Sesli odadayken oda ve PTT durumunu üstte göster.</small>
+              </div>
+              <label class="wttr-switch">
+                <input type="checkbox" id="wttr-overlay-enabled" />
+                <span class="wttr-switch-track"></span>
+              </label>
             </div>
             <p class="wttr-status" id="wttr-ptt-status">Basılı tut: <strong>Alt</strong></p>
             <div class="wttr-actions">

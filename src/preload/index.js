@@ -18,6 +18,7 @@ const api = {
   getVersion: () => ipcRenderer.invoke('app:get-version'),
   reportSession: (payload) => ipcRenderer.send('session:report', payload),
   reportNotifications: (payload) => ipcRenderer.send('notifications:report', payload),
+  reportVoiceState: (payload) => ipcRenderer.send('voice:report', payload),
   openExternal: (url) => ipcRenderer.invoke('app:open-external', url),
   openMicSettings: () => ipcRenderer.invoke('app:open-mic-settings'),
   notifyTest: () => ipcRenderer.invoke('app:notify-test'),

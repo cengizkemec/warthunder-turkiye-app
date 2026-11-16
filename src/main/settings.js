@@ -12,6 +12,9 @@ const DEFAULTS = Object.freeze({
   closeToTray: true,
   notificationsEnabled: true,
   autoUpdate: true,
+  overlayEnabled: true,
+  overlayCollapsed: false,
+  overlayPosition: null,
   seenNotificationIds: [],
 });
 
@@ -32,6 +35,18 @@ function sanitize(input, base = DEFAULTS) {
   const seen = Array.isArray(source.seenNotificationIds)
     ? source.seenNotificationIds
     : base.seenNotificationIds;
+  const rawPosition = Object.prototype.hasOwnProperty.call(source, 'overlayPosition')
+    ? source.overlayPosition
+    : base.overlayPosition;
+  const overlayPosition =
+    rawPosition &&
+    Number.isFinite(Number(rawPosition.x)) &&
+    Number.isFinite(Number(rawPosition.y))
+      ? {
+          x: Math.round(Number(rawPosition.x)),
+          y: Math.round(Number(rawPosition.y)),
+        }
+      : null;
 
   return {
     pttKey,
@@ -45,6 +60,15 @@ function sanitize(input, base = DEFAULTS) {
         : base.notificationsEnabled,
     autoUpdate:
       typeof source.autoUpdate === 'boolean' ? source.autoUpdate : base.autoUpdate,
+    overlayEnabled:
+      typeof source.overlayEnabled === 'boolean'
+        ? source.overlayEnabled
+        : base.overlayEnabled,
+    overlayCollapsed:
+      typeof source.overlayCollapsed === 'boolean'
+        ? source.overlayCollapsed
+        : base.overlayCollapsed,
+    overlayPosition,
     seenNotificationIds: seen
       .filter((value) => typeof value === 'string' && value.length > 0)
       .slice(-120),
@@ -149,6 +173,8 @@ function publicSettings() {
     closeToTray: settings.closeToTray,
     notificationsEnabled: settings.notificationsEnabled,
     autoUpdate: settings.autoUpdate,
+    overlayEnabled: settings.overlayEnabled,
+    overlayCollapsed: settings.overlayCollapsed,
     version: app.getVersion(),
   };
 }

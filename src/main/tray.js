@@ -15,6 +15,7 @@ let tray = null;
 let lastMenuSignature = '';
 let currentSettings = null;
 let currentSession = null;
+let toggleOverlayCallback = null;
 
 function iconPath() {
   return app.isPackaged
@@ -50,6 +51,12 @@ function buildMenu() {
     { label: 'Sesli Odalar', click: () => openSection('rooms') },
     { label: 'Forum', click: () => openSection('forum') },
     { label: 'Blog', click: () => openSection('blog') },
+    {
+      label: 'Sesli Oda Overlay’i',
+      type: 'checkbox',
+      checked: currentSettings?.overlayEnabled !== false,
+      click: () => toggleOverlayCallback?.(),
+    },
     { type: 'separator' },
     {
       label: `Bildirimler${unread > 0 ? ` (${unread > 99 ? '99+' : unread})` : ''}`,
@@ -90,6 +97,7 @@ function updateTray(settings, session) {
     user: user || null,
     unread,
     ptt: pttLabel(currentSettings),
+    overlay: currentSettings?.overlayEnabled !== false,
   });
 
   if (signature === lastMenuSignature) return;
@@ -98,7 +106,11 @@ function updateTray(settings, session) {
   tray.setContextMenu(buildMenu());
 }
 
-function createTray({ settings, session } = {}) {
+function createTray({ settings, session, onToggleOverlay } = {}) {
+  if (typeof onToggleOverlay === 'function') {
+    toggleOverlayCallback = onToggleOverlay;
+  }
+
   try {
     const image = nativeImage.createFromPath(iconPath());
 

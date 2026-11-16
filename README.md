@@ -19,6 +19,9 @@ Kurulan çalıştırılabilir dosya **`wttr-app.exe`** olarak üretilir.
   Windows mikrofon ayarları uygulama panelinden yapılır.
 - **Arka planda bas-konuş:** Uygulama minimize edilse veya tepsiye küçültülse bile
   global bas-konuş çalışır. `backgroundThrottling` kapalıdır.
+- **Sesli oda overlay’i:** Sesli odadayken ekranın üstünde kalan küçük bir HUD;
+  oda, katılımcılar, konuşan kişi, PTT durumu, mikrofon/sağırlaştırma/ayrıl
+  düğmeleri. Daraltılabilir ve konumu hatırlanır.
 - **Flarum Social entegrasyonu:** PTT tuşu `PATCH /api/social/me/profile` ile siteye
   senkronize edilir; sesli odalarda Flarum Social'in beklediği tuş olayları gönderilir.
 - **Desktop Bridge:** `https://warthunder.tr/api/desktop/*` üzerinden oturum,
@@ -57,7 +60,7 @@ npm start
 
 ```powershell
 npm run pack   # dist\win-unpacked\wttr-app.exe
-npm run dist   # dist\wttr-app-Setup-<sürüm>.exe
+npm run dist   # dist\wttr-app-Setup-1.0.0.exe
 ```
 
 Kurulum NSIS tabanlıdır ve kullanıcı bazlı kurulur (`perMachine: false`). Kurulumda
@@ -79,6 +82,25 @@ Akış:
    yayınlar. Uygulama tuşu ile site tuşu farklıysa ikisi de gönderilir.
 5. PTT tuşu, uygulama panelinden değiştirildiğinde siteye `voice_settings` olarak
    kaydedilir.
+
+## Sesli oda overlay’i
+
+Sesli bir odaya girildiğinde `wttr-app` küçük bir always-on-top HUD açar:
+
+- Oda adı, katılımcı sayısı ve gecikme.
+- Konuşan katılımcı yeşil halka ile işaretlenir.
+- PTT canlı göstergesi (`CANLI`), mikrofon, sağırlaştırma, odaya git ve ayrıl
+  düğmeleri.
+- Başlık çubuğundan sürüklenebilir; daraltıldığında 264×50 px’lik bir şeride
+  dönüşür. Konum `settings.json` içinde saklanır.
+- Overlay, uygulama minimize/tepsideyken de görünür. War Thunder **exclusive
+  fullscreen** modundaysa Electron penceresi görünmez; borderless/windowed
+  modda çalışır.
+- Dock’tan veya sistem tepsisinden açılıp kapatılabilir.
+
+Overlay’in mikrofon/sağırlaştırma/ayrıl düğmeleri Flarum Social’in
+`voiceSession` nesnesini kullanır. Sesli oda durumu sayfadan 600 ms’de bir
+okunur; PTT tuşu ve canlı durum ana süreçten iletilir.
 
 ## Güncelleme
 
@@ -160,6 +182,10 @@ scripts/         tuş haritası üretici, yardımcı derleme
 
 ## Bilinen notlar
 
+- **Turnstile hatası:** 1.1.0 ile `challenges.cloudflare.com` iframe’ine gereken
+  storage izinleri verildi. Giriş ekranındaki **Doğrulamayı yenile** bağlantısı
+  widget’ı yeniden yükler. Sorun sürerse VPN’i kapat, ağı değiştir veya birkaç
+  dakika sonra tekrar dene.
 - WebView2/Electron alt süreçleri Görev Yöneticisi'nde görünür; bu normaldir. Ana
   uygulama süreci paketlenmiş sürümde `wttr-app.exe` olarak görünür.
 - Windows mikrofon gizlilik ayarlarında uygulama Electron/Chromium süreci olarak
