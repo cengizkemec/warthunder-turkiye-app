@@ -40,6 +40,7 @@ Gereksinimler:
 - Node.js 20+
 - Rust (yalnızca `ptt-helper` için)
 - Visual Studio Build Tools (Rust MSVC hedefi için)
+- Inno Setup 7 (kurulum paketi için; `ISCC.exe`)
 
 ```powershell
 npm install
@@ -59,12 +60,25 @@ npm start
 ### Paketleme
 
 ```powershell
-npm run pack   # dist\win-unpacked\wttr-app.exe
-npm run dist   # dist\wttr-app-Setup-1.0.0.exe
+npm run pack
+& "C:\Program Files\Inno Setup 7\ISCC.exe" installer\wttr-app.iss
 ```
 
-Kurulum NSIS tabanlıdır ve kullanıcı bazlı kurulur (`perMachine: false`). Kurulumda
-masaüstü ve Başlat menüsü kısayolları oluşturulur.
+Inno Setup çıktısı:
+
+```text
+dist-installer\wttr-app-Setup-<sürüm>.exe
+```
+
+Kurulum kullanıcı bazlıdır (admin gerekmez), `{localappdata}\Programs\wttr`
+klasörüne kurulur ve masaüstüne **`wttr`** adlı kısayolu, Başlat menüsüne
+`wttr` grubunu ekler.
+
+Alternatif olarak electron-builder NSIS paketi de üretilebilir:
+
+```powershell
+npm run dist   # NSIS (opsiyonel)
+```
 
 ## Bas-konuş
 
@@ -109,8 +123,9 @@ Uygulama iki kaynağı kontrol eder:
 1. GitHub: `cengizkemec/warthunder-turkiye-app` son release
 2. Site: `https://warthunder.tr/api/desktop/config`
 
-Yeni sürüm varsa GitHub asset'i indirilir, SHA-256 doğrulanır ve NSIS kurulumu
-`/S` ile başlatılır. Kurulumdan önce "Yeniden başlat ve güncelle" düğmesi gösterilir.
+Yeni sürüm varsa GitHub asset'i indirilir, SHA-256 doğrulanır ve kurulum dosyası
+sessiz parametrelerle başlatılır; installer hem Inno Setup hem NSIS biçimini
+destekler. Kurulumdan önce "Yeniden başlat ve güncelle" düğmesi gösterilir.
 
 Yeni sürüm yayınlamak için:
 
@@ -192,5 +207,5 @@ scripts/         tuş haritası üretici, yardımcı derleme
   listelenebilir. `Mikrofonu test et` ile izin isteğini tetikleyin.
 - Flarum oturumu `persist:warthunder` Electron oturumunda saklanır. Tarayıcıdaki
   oturum uygulamaya taşınmaz; ilk açılışta bir kez giriş yapılır.
-- Eski Tauri sürümü GitHub üzerinden bu Electron sürümünü görür; indirilen NSIS
-  kurulumunu takip ederek geçiş yapabilir.
+- Eski Tauri sürümü GitHub üzerinden bu Electron sürümünü görür; indirilen
+  kurulum dosyasını takip ederek geçiş yapabilir.

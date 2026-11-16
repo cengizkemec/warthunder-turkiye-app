@@ -1,5 +1,6 @@
 node_modules/
 dist/
-dist-release/
+dist-release*/
+dist-installer/
 ptt-helper/target/
 *.log

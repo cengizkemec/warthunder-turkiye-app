@@ -6,12 +6,11 @@ const {
   app,
   BrowserWindow,
   Menu,
-  desktopCapturer,
-  screen,
   session,
   shell,
 } = require('electron');
 const { log } = require('./log');
+const screenPicker = require('./screen-picker');
 
 const SITE_ORIGIN = 'https://warthunder.tr';
 const HOME_URL = `${SITE_ORIGIN}/social`;
@@ -153,29 +152,18 @@ function configureSession(ses) {
     ses.setDisplayMediaRequestHandler(
       async (_request, callback) => {
         try {
-          const sources = await desktopCapturer.getSources({
-            types: ['screen', 'window'],
-            thumbnailSize: { width: 0, height: 0 },
-          });
-
-          const primary = screen.getPrimaryDisplay();
-          const source =
-            sources.find((item) => item.display_id === String(primary.id)) ||
-            sources.find((item) => item.id.startsWith('screen:')) ||
-            sources[0];
-
-          if (!source) {
-            callback({});
-            return;
-          }
-
-          callback({ video: source, audio: 'loopback' });
+          await screenPicker.show({ parent: mainWindow, callback });
         } catch (error) {
           log('display-capture:error', error);
-          callback({});
+
+          try {
+            callback({});
+          } catch {
+            // The request may already be settled.
+          }
         }
       },
-      { useSystemPicker: true }
+      { useSystemPicker: false }
     );
   } catch (error) {
     log('display-capture:setup-error', error);

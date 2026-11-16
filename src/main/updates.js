@@ -324,11 +324,17 @@ async function installUpdate(filePath) {
 
   log('updates:install', target, `${stat.size} bytes`);
 
-  const child = spawn(target, ['/S'], {
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: true,
-  });
+  // NSIS uses /S, Inno Setup uses /VERYSILENT. Passing both keeps automatic
+  // updates silent for either installer format.
+  const child = spawn(
+    target,
+    ['/S', '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-'],
+    {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    }
+  );
 
   child.unref();
 

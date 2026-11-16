@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ekran Paylaşımı</title>
+    <link rel="stylesheet" href="screen-picker.css" />
+  </head>
+  <body>
+    <header class="picker-header">
+      <div class="header-copy">
+        <span class="eyebrow">WAR THUNDER TÜRKİYE</span>
+        <h1>Ekran paylaşımı</h1>
+        <p>Paylaşmak istediğin ekranı veya pencereyi seç.</p>
+      </div>
+      <div class="header-actions">
+        <button class="button" id="refresh" type="button">Yenile</button>
+        <button class="button is-danger" id="cancel" type="button">İptal</button>
+      </div>
+    </header>
+
+    <main class="picker-body" id="picker-body">
+      <div class="loading" id="loading">
+        <span class="spinner"></span>
+        <span>Ekranlar ve pencereler hazırlanıyor…</span>
+      </div>
+
+      <section class="source-section" id="screens-section" hidden>
+        <h2>Ekranlar</h2>
+        <div class="source-grid" id="screens"></div>
+      </section>
+
+      <section class="source-section" id="windows-section" hidden>
+        <h2>Pencereler</h2>
+        <div class="source-grid" id="windows"></div>
+      </section>
+
+      <div class="empty" id="empty" hidden>
+        Paylaşılabilir ekran veya pencere bulunamadı.
+      </div>
+    </main>
+
+    <footer class="picker-footer">
+      <span>Bir karta tıklayarak paylaşımı başlat.</span>
+      <span><kbd>Esc</kbd> iptal eder.</span>
+    </footer>
+
+    <script src="screen-picker.js"></script>
+  </body>
+</html>
