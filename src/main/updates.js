@@ -305,8 +305,12 @@ async function downloadUpdate(info, { onProgress, signal } = {}) {
   };
 }
 
-async function installUpdate(filePath) {
+let installerStarted = false;
+
+function launchInstaller(filePath) {
   const target = path.resolve(String(filePath || ''));
+
+  if (installerStarted) return false;
 
   if (!target.toLowerCase().endsWith('.exe')) {
     throw new Error('invalid update file');
@@ -322,21 +326,33 @@ async function installUpdate(filePath) {
     throw new Error('update file is too small');
   }
 
-  log('updates:install', target, `${stat.size} bytes`);
-
   // NSIS uses /S, Inno Setup uses /VERYSILENT. Passing both keeps automatic
   // updates silent for either installer format.
-  const child = spawn(
-    target,
-    ['/S', '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-'],
-    {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-    }
-  );
+  let child;
 
+  try {
+    child = spawn(
+      target,
+      ['/S', '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-'],
+      {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+      }
+    );
+  } catch (error) {
+    installerStarted = false;
+    throw error;
+  }
+
+  installerStarted = true;
   child.unref();
+  log('updates:install', target, `${stat.size} bytes`);
+  return true;
+}
+
+async function installUpdate(filePath) {
+  if (!launchInstaller(filePath)) return;
 
   setTimeout(() => {
     app.quit();
@@ -369,6 +385,7 @@ module.exports = {
   checkForUpdates,
   downloadUpdate,
   installUpdate,
+  launchInstaller,
   openRelease,
   compareVersions,
 };

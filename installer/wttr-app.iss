@@ -1,5 +1,5 @@
 #define MyAppName "War Thunder Türkiye"
-#define MyAppVersion "1.1.2"
+#define MyAppVersion "1.1.3"
 #ifndef SourceDir
   #define SourceDir "..\dist\win-unpacked"
 #endif
@@ -17,7 +17,7 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={localappdata}\Programs\wttr
-DefaultGroupName=wttr
+DefaultGroupName=WTTR
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
@@ -46,10 +46,16 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[InstallDelete]
+Type: files; Name: "{autodesktop}\wttr.lnk"
+Type: files; Name: "{autodesktop}\wttr-app.lnk"
+Type: files; Name: "{autoprograms}\wttr-app.lnk"
+Type: filesandordirs; Name: "{autoprograms}\wttr"
+
 [Icons]
-Name: "{autoprograms}\wttr\wttr"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppExeName}"; AppUserModelID: "tr.warthunder.desktop"
-Name: "{autoprograms}\wttr\Kaldır"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\wttr"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppExeName}"; AppUserModelID: "tr.warthunder.desktop"
+Name: "{autoprograms}\WTTR\WTTR"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppExeName}"; AppUserModelID: "tr.warthunder.desktop"
+Name: "{autoprograms}\WTTR\Kaldır"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\WTTR"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppExeName}"; AppUserModelID: "tr.warthunder.desktop"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "wttr'u başlat"; Flags: nowait postinstall skipifsilent

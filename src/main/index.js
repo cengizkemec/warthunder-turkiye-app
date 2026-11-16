@@ -30,6 +30,7 @@ const {
   checkForUpdates,
   downloadUpdate,
   installUpdate,
+  launchInstaller,
   openRelease,
 } = require('./updates');
 const { createTray, updateTray, destroyTray } = require('./tray');
@@ -258,7 +259,7 @@ function startUpdateDownload(info) {
 
         const notification = new Notification({
           title: 'Güncelleme hazır',
-          body: `wttr-app v${info.latestVersion} indirildi. Yeniden başlatınca kurulacak.`,
+          body: `wttr-app v${info.latestVersion} indirildi. Uygulamadan çıkınca kurulacak.`,
           icon: nativeImage.createFromPath(appIconPath()),
           silent: false,
         });
@@ -856,6 +857,18 @@ if (!gotLock) {
     if (updateDownloadController) {
       updateDownloadController.abort();
       updateDownloadController = null;
+    }
+
+    if (pendingUpdate?.filePath && settingsStore.get().autoUpdate) {
+      try {
+        const started = launchInstaller(pendingUpdate.filePath);
+
+        if (started) {
+          log('auto-update:install-on-quit', pendingUpdate.filePath);
+        }
+      } catch (error) {
+        log('auto-update:install-on-quit-error', error);
+      }
     }
 
     ptt.stop();

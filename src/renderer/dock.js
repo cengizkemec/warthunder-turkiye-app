@@ -232,7 +232,8 @@
     box.appendChild(document.createElement('br'));
 
     const note = document.createElement('span');
-    note.textContent = 'Kurulum için uygulama yeniden başlatılacak.';
+    note.textContent =
+      'Çıkışta otomatik kurulacak. Hemen kurmak için aşağıdaki düğmeyi kullan.';
     box.appendChild(note);
 
     const actions = document.createElement('div');
@@ -752,7 +753,7 @@
             <div class="wttr-row">
               <div class="wttr-row-copy">
                 <strong class="wttr-row-title">Otomatik güncelleme</strong>
-                <small class="wttr-row-note">Açılışta GitHub üzerinden denetle ve arka planda indir.</small>
+                <small class="wttr-row-note">Açılışta denetle, arka planda indir ve çıkışta kur.</small>
               </div>
               <label class="wttr-switch">
                 <input type="checkbox" id="wttr-auto-update" />

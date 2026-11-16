@@ -71,8 +71,8 @@ dist-installer\wttr-app-Setup-<sürüm>.exe
 ```
 
 Kurulum kullanıcı bazlıdır (admin gerekmez), `{localappdata}\Programs\wttr`
-klasörüne kurulur ve masaüstüne **`wttr`** adlı kısayolu, Başlat menüsüne
-`wttr` grubunu ekler.
+klasörüne kurulur ve masaüstüne **`WTTR`** adlı kısayolu, Başlat menüsüne
+`WTTR` grubunu ekler.
 
 Alternatif olarak electron-builder NSIS paketi de üretilebilir:
 
