@@ -1,6 +1,6 @@
 {
   "name": "wttr-app",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "War Thunder Türkiye masaüstü uygulaması",
   "main": "src/main/index.js",
   "author": "Cengiz Kemec",

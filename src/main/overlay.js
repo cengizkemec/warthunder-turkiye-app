@@ -96,19 +96,20 @@ function sendSnapshot() {
 }
 
 function applyVisibility() {
-  if (!overlayWindow || overlayWindow.isDestroyed()) return;
-
   if (shouldShow()) {
-    if (!overlayWindow.isVisible()) {
-      overlayWindow.showInactive();
+    const window = ensureWindow();
+    if (!window) return;
+
+    if (!window.isVisible()) {
+      window.showInactive();
     }
 
     try {
-      overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+      window.setAlwaysOnTop(true, 'screen-saver');
     } catch {
-      overlayWindow.setAlwaysOnTop(true);
+      window.setAlwaysOnTop(true);
     }
-  } else if (overlayWindow.isVisible()) {
+  } else if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
     overlayWindow.hide();
   }
 }
@@ -195,11 +196,14 @@ function registerIpc() {
 }
 
 function create({ actionHandler } = {}) {
-  if (overlayWindow && !overlayWindow.isDestroyed()) return overlayWindow;
-
   if (typeof actionHandler === 'function') onAction = actionHandler;
   currentSettings = settingsStore.publicSettings();
   registerIpc();
+  log('overlay:initialized');
+}
+
+function ensureWindow() {
+  if (overlayWindow && !overlayWindow.isDestroyed()) return overlayWindow;
 
   const collapsed = settingsStore.get().overlayCollapsed === true;
   const width = overlayWidth(collapsed);
@@ -307,6 +311,8 @@ function updateVoiceState(next) {
     participants,
   };
 
+  if (shouldShow()) ensureWindow();
+
   send('overlay:state', voiceState);
   applyVisibility();
 }
@@ -325,6 +331,9 @@ function updatePtt(next) {
 
 function updateSettings(next) {
   currentSettings = next || settingsStore.publicSettings();
+
+  if (shouldShow()) ensureWindow();
+
   send('overlay:settings', currentSettings);
   applyVisibility();
 }
